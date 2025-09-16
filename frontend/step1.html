@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IHC Registration</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="logo-container">
+      <img src="images/npra-logo.png" alt="NPRA Logo" width="600" height="90">
+    </div>
+    
+
+    <div class="progress-container">
+      <a href="step1.html" class="progress-step" data-step="1">Register</a>
+      <a href="step2.html" class="progress-step" data-step="2">Portal</a>
+      <a href="step3.html" class="progress-step" data-step="3">Booking</a>
+      <a href="step4.html" class="progress-step" data-step="4">Payment</a>
+      <a href="step5.html" class="progress-step" data-step="5">Confirm</a>
+    </div>
+
+    <h2>IHC Registration</h2>
+    <form id="registrationForm">
+      <label>First Name (as in Passport)</label>
+      <input type="text" id="firstName" name="firstName" required>
+    
+      <label>Middle Name (as in Passport)</label>
+      <input type="text" id="middleName" name="middleName">
+    
+      <label>Last Name (as in Passport)</label>
+      <input type="text" id="lastName" name="lastName" required>
+    
+      <label>Email</label>
+      <input type="email" id="email" name="email" required>
+    
+      <label>Password</label>
+      <input type="password" id="password" name="password" required>
+    
+      <button type="submit">Register</button>
+    </form>
+    
+  </main>
+  <footer>
+    <p>© 2025 NPRA Bahrain</p>
+  </footer>
+  <script src="js/progress.js"></script>
+  <script src="js/step1.js"></script>
+</body>
+</html>

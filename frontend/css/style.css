@@ -1,0 +1,43 @@
+/* Global Styles */
+* { margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+body { background:#f9f9f9; color:#333; line-height:1.6; }
+main { max-width:600px; margin:40px auto; padding:30px; background:#fff; border:1px solid #ddd; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05); }
+h2 { text-align:center; color:#004080; margin-bottom:20px; }
+form { display:flex; flex-direction:column; }
+label { margin-bottom:12px; font-weight:bold; font-size:14px; }
+input, select, textarea { margin-top:6px; padding:10px; font-size:14px; border:1px solid #bbb; border-radius:5px; width:100%; background:#fff; }
+input:focus, select:focus, textarea:focus { border-color:#004080; outline:none; background-color:#f0f8ff; }
+button { margin-top:20px; padding:12px; background-color:#004080; color:white; font-weight:bold; border:none; border-radius:5px; cursor:pointer; }
+button:hover { background-color:#0059b3; }
+button:disabled { background:#aaa; cursor:not-allowed; }
+#summary { padding:15px; background:#f4f7fb; border:1px solid #ddd; border-radius:6px; margin-bottom:20px; }
+#welcomeText { font-size:18px; text-align:center; margin-bottom:15px; }
+#ihcCode { font-weight:bold; color:#b30000; }
+.logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  .logo-container img {
+    max-height: 60px;
+    
+  }
+  footer {
+    text-align: center;
+    padding: 15px 0;
+    background-color: #f9f9f9; /* optional for visual separation */
+    color: #333;
+    font-size: 14px;
+  }
+  
+  
+
+/* Progress Bar */
+.progress-container { display:flex; justify-content:center; margin:20px 0; gap:15px; }
+.progress-step { padding:8px 14px; border-radius:5px; background:#e0e0e0; color:#555; text-decoration:none; font-weight:bold; transition:0.3s; }
+.progress-step:hover { background:#b3d1ff; color:#003366; }
+.progress-step.active { background:#003366; color:#fff; }
+.progress-step.completed { background:#4caf50; color:#fff; }
+
+
