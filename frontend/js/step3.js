@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       // ✅ Send booking to backend with userId in URL
-      const response = await fetch(`/api/booking/${userId}`, {
+      const response = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     // ✅ Fetch user status
-    const statusRes = await fetch(`/api/status/${userId}`);
+    const statusRes = await fetch(`https://ihc-portal.onrender.com/api/status/${userId}`);
     const statusData = await statusRes.json();
 
     if (!statusRes.ok) {
@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // ✅ Fetch bookings
-    const bookingRes = await fetch(`/api/booking/${userId}`);
+    const bookingRes = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`);
     const bookingData = await bookingRes.json();
 
     if (bookingRes.ok && bookingData.bookings && bookingData.bookings.length > 0) {
