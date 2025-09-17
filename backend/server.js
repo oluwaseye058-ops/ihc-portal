@@ -7,8 +7,8 @@ const nodemailer = require("nodemailer");
 require("dotenv").config(); // ✅ load env variables
 
 // 👉 Connect to MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI, {
+console.log("MONGODB_URI:", process.env.MONGODB_URI);
+mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
