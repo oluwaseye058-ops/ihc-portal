@@ -1,108 +1,134 @@
+// backend/server.js
+const mongoose = require("mongoose");
 const express = require("express");
 const path = require("path");
-const crypto = require("crypto");
 const cors = require("cors");
-const nodemailer = require("nodemailer"); // ✅ add nodemailer
+const nodemailer = require("nodemailer");
 require("dotenv").config(); // ✅ load env variables
+
+// 👉 Connect to MongoDB
+mongoose
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
+
+// 👉 Load User model
+const User = require("./models/user");
 
 const app = express();
 app.use(cors());
-
-// Middleware
 app.use(express.json());
 
 // 👉 Serve frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Temporary in-memory storage (replace with DB later)
-let users = {};
-let payments = {};
-
 // 👉 Registration endpoint
-app.post("/api/register", (req, res) => {
-  const { firstName, middleName, lastName, email } = req.body;
+app.post("/api/register", async (req, res) => {
+  try {
+    const { firstName, middleName, lastName, email } = req.body;
 
-  if (!firstName || !lastName || !email) {
-    return res.status(400).json({ error: "Missing required fields" });
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const fullName = `${firstName} ${middleName || ""} ${lastName}`.trim();
+
+    const newUser = new User({
+      fullName,
+      email,
+      paymentStatus: "pending",
+    });
+
+    await newUser.save();
+
+    console.log("✅ New registration:", newUser);
+
+    res.json({ success: true, userId: newUser._id });
+  } catch (err) {
+    console.error("❌ Registration error:", err);
+    res.status(500).json({ error: "Server error during registration" });
   }
-
-  const userId = crypto.randomBytes(4).toString("hex"); // unique ID
-  users[userId] = {
-    fullName: `${firstName} ${middleName || ""} ${lastName}`,
-    email,
-    paymentStatus: "pending",
-    ihcCode: null,
-  };
-
-  console.log("✅ New registration:", users[userId]);
-
-  res.json({ success: true, userId });
 });
 
 // 👉 Status check (Step 2 portal)
-app.get("/api/status/:userId", (req, res) => {
-  const { userId } = req.params;
+app.get("/api/status/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
 
-  if (!users[userId]) {
-    return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // If payment is confirmed, assign IHC code if not already assigned
+    if (user.paymentStatus === "confirmed" && !user.ihcCode) {
+      user.ihcCode = "IHC" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      await user.save();
+    }
+
+    res.json({
+      fullName: user.fullName,
+      paymentStatus: user.paymentStatus,
+      ihcCode: user.ihcCode || null,
+    });
+  } catch (err) {
+    console.error("❌ Status error:", err);
+    res.status(500).json({ error: "Server error during status check" });
   }
-
-  const user = users[userId];
-
-  // If payment is confirmed, assign unique IHC code (once only)
-  if (user.paymentStatus === "confirmed" && !user.ihcCode) {
-    user.ihcCode = "IHC" + crypto.randomBytes(3).toString("hex").toUpperCase();
-  }
-
-  res.json({
-    fullName: user.fullName,
-    paymentStatus: user.paymentStatus,
-    ihcCode: user.ihcCode || null,
-  });
 });
 
-// 👉 Mock payment update (Step 4)
-app.post("/api/payment/:userId", (req, res) => {
-  const { userId } = req.params;
-  const { method } = req.body;
+// 👉 Payment update (Step 4)
+app.post("/api/payment/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { method } = req.body;
 
-  if (!users[userId]) {
-    return res.status(404).json({ error: "User not found" });
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // For now, all payments except "card" auto-confirm
+    if (method && method !== "card") {
+      user.paymentStatus = "confirmed";
+    }
+    await user.save();
+
+    console.log("💳 Payment update:", user);
+
+    res.json({
+      success: true,
+      paymentStatus: user.paymentStatus,
+    });
+  } catch (err) {
+    console.error("❌ Payment error:", err);
+    res.status(500).json({ error: "Server error during payment update" });
   }
-
-  // For now, all payments except "card" are auto-confirmed
-  if (method && method !== "card") {
-    users[userId].paymentStatus = "confirmed";
-  }
-
-  console.log("💳 Payment update:", users[userId]);
-
-  res.json({
-    success: true,
-    paymentStatus: users[userId].paymentStatus,
-  });
 });
 
 // 👉 Nodemailer transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail", // or "smtp.mailgun.org", etc.
+  service: "gmail",
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
 
-// Import booking routes and inject email logic
+// 👉 Import booking routes
 const bookingRoutes = require("./routes/booking");
-app.use("/api/booking", bookingRoutes(transporter)); // ✅ pass transporter
+app.use("/api/booking", bookingRoutes(transporter));
 
-// Test route
+// 👉 Test route
 app.get("/", (req, res) => {
   res.send("IHC Backend Running 🚀");
 });
 
-// Start server
-const PORT = 5000;
+// 👉 Start server
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
