@@ -1,3 +1,5 @@
+// js/step4.js
+
 document.addEventListener("DOMContentLoaded", async () => {
   const bookingSummaryEl = document.getElementById("bookingSummary");
   const paymentForm = document.getElementById("paymentForm");
@@ -6,8 +8,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ✅ Get booking info from localStorage
   const bookingData = JSON.parse(localStorage.getItem("booking"));
+  const userId = localStorage.getItem("userId");
 
-  if (!bookingData) {
+  if (!bookingData || !userId) {
     alert("No booking found. Please complete Step 3 first.");
     window.location.href = "step3.html";
     return;
@@ -25,7 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     <p><strong>Appointment:</strong> ${bookingData.bookingDate} at ${bookingData.timeSlot}</p>
   `;
 
-  // ✅ Hide invoice unless backend later attaches it
+  // ✅ Hide invoice unless booking approved
   if (bookingData.bookingStatus === "approved") {
     invoiceContainer.style.display = "block";
     invoiceLink.href = bookingData.invoiceUrl || "#";
@@ -41,10 +44,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    // For now, just store locally — later we’ll sync to backend
-    bookingData.paymentMethod = method;
-    localStorage.setItem("booking", JSON.stringify(bookingData));
+    try {
+      // ✅ Send to backend
+      const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}/paymentMethod`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod: method, booking: bookingData }),
+      });
 
-    alert("Payment preference saved. Invoice will appear once staff approves your booking.");
+      if (res.ok) {
+        const result = await res.json();
+
+        // Update local copy with pending status
+        bookingData.paymentMethod = method;
+        bookingData.bookingStatus = "pendingApproval";
+        localStorage.setItem("booking", JSON.stringify(bookingData));
+
+        alert("Booking Completed. IHC staff will generate your invoice once your booking request has been approved. Please check your email.");
+        window.location.href = "step2.html"; // ✅ Redirect back to portal
+      } else {
+        const error = await res.json();
+        alert(`Failed to submit payment method: ${error.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Payment method error:", err);
+      alert("Error submitting payment method. Try again later.");
+    }
   });
 });

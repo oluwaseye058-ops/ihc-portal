@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const bookingForm = document.getElementById("bookingForm");
   const dateInput = document.getElementById("bookingDate");
 
-  // ✅ Disable past dates
+  // Disable past dates
   const today = new Date().toISOString().split("T")[0];
   dateInput.setAttribute("min", today);
 
@@ -14,14 +14,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const formData = new FormData(bookingForm);
     const data = Object.fromEntries(formData.entries());
 
-    // ✅ Get userId from localStorage (set at registration in step1)
     const userId = localStorage.getItem("userId");
     if (!userId) {
       alert("User not found. Please register first.");
       return;
     }
 
-    // ✅ Check required fields
+    // Check required fields
     for (const [key, value] of Object.entries(data)) {
       if (!value) {
         alert(`Please fill in the field: ${key}`);
@@ -30,7 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // ✅ Send booking to backend with userId in URL
       const response = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -39,14 +37,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (response.ok) {
         const result = await response.json();
-      
-        // ✅ If backend didn’t return booking, fall back to submitted data
         const bookingData = result.booking || data;
-      
         localStorage.setItem("booking", JSON.stringify(bookingData));
+
+        // ✅ New: Show success message before redirect
+        alert(
+          "Booking submitted successfully!\nStaff has been notified via email.\nYou will see the invoice once your booking is approved. Keep an eye on your email"
+        );
+
         window.location.href = "step4.html";
-      }
-       else {
+      } else {
         const error = await response.json();
         alert(`Failed to submit booking: ${error.message || "Unknown error"}`);
       }

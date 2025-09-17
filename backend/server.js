@@ -2,15 +2,14 @@ const express = require("express");
 const path = require("path");
 const crypto = require("crypto");
 const cors = require("cors");
-
+const nodemailer = require("nodemailer"); // ✅ add nodemailer
+require("dotenv").config(); // ✅ load env variables
 
 const app = express();
 app.use(cors());
 
 // Middleware
 app.use(express.json());
-
-
 
 // 👉 Serve frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));
@@ -84,9 +83,18 @@ app.post("/api/payment/:userId", (req, res) => {
   });
 });
 
-// Import booking routes
+// 👉 Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail", // or "smtp.mailgun.org", etc.
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// Import booking routes and inject email logic
 const bookingRoutes = require("./routes/booking");
-app.use("/api/booking", bookingRoutes);
+app.use("/api/booking", bookingRoutes(transporter)); // ✅ pass transporter
 
 // Test route
 app.get("/", (req, res) => {

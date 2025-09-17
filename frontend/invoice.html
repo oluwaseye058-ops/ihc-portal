@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IHC Invoice</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <!-- Logo -->
+    <div class="logo-container">
+      <img src="images/npra-logo.png" alt="NPRA Logo" width="600" height="90">
+    </div>
+
+    <h2>Invoice & Booking Status</h2>
+    <div id="bookingDetails"></div>
+
+    <!-- Invoice download section -->
+    <div id="invoiceSection" style="display:none; margin-top:20px;">
+      <h3>Invoice</h3>
+      <p>Your booking has been approved. You may download your invoice below:</p>
+      <a id="invoiceDownload" href="#" target="_blank" 
+         style="display:inline-block;padding:12px 24px;background-color:#28a745;color:#fff;
+                text-decoration:none;border-radius:6px;font-weight:bold;">
+        Download Invoice
+      </a>
+    </div>
+
+    <!-- Pending message -->
+    <div id="pendingSection" style="display:none; margin-top:20px;">
+      <p><strong>Status:</strong> Booking approval pending. No invoice yet.</p>
+    </div>
+
+    <!-- Back to portal -->
+    <div style="margin-top:30px;">
+      <a href="step2.html" 
+         style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;
+                text-decoration:none;border-radius:6px;">
+        Back to Portal
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2025 NPRA Bahrain</p>
+  </footer>
+
+  <script src="js/invoice.js"></script>
+</body>
+</html>
