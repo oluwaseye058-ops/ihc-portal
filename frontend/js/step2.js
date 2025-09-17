@@ -1,8 +1,7 @@
-// js/step2.js
 
-// Change this to your deployed backend or leave empty for relative paths.
-// Example: const API_BASE = "https://ihc-portal.onrender.com";
-const API_BASE = ""; // leave empty -> uses relative /api/ URLs
+// js/step2.js
+const API_BASE = "https://ihc-portal-1.onrender.com";  // 👈 use your Render backend
+
 
 // Get userId from either sessionStorage or localStorage
 const userId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
