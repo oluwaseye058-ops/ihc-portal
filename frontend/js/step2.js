@@ -1,5 +1,5 @@
 // js/step2.js
-const API_BASE = "https://ihc-portal-1.onrender.com";  // 👈 use your Render backend
+const API_BASE = "https://ihc-portal.onrender.com";  // 👈 use your Render backend
 
 
 // Get userId from either sessionStorage or localStorage
