@@ -34,6 +34,12 @@ app.post("/api/register", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+     // Check if email already exists
+     const existingUser = await User.findOne({ email });
+     if (existingUser) {
+       return res.status(409).json({ error: "Email already registered" }); // 409 = Conflict
+     }
+
     const fullName = `${firstName} ${middleName || ""} ${lastName}`.trim();
 
     const newUser = new User({

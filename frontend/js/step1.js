@@ -25,6 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await response.json();
 
+      if (response.status === 409) {
+        alert("This email is already registered. Please use another email.");
+        return;
+      }
+
       if (data.success) {
         // Save userId in sessionStorage for Step 2
         sessionStorage.setItem("userId", data.userId);
