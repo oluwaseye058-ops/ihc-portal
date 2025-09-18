@@ -4,6 +4,23 @@
   <meta charset="UTF-8">
   <title>IHC Booking</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    fieldset.readonly {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 6px;
+    }
+    fieldset.readonly legend {
+      font-weight: bold;
+      color: #444;
+    }
+    input[readonly] {
+      background-color: #eee;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
   <main>
@@ -21,15 +38,21 @@
 
     <h2>Book Your IHC Appointment</h2>
     <form id="bookingForm">
-      <label>First Name (As in Passport)</label>
-      <input type="text" id="firstName" name="firstName" required>
 
-      <label>Middle Name</label>
-      <input type="text" id="middleName" name="middleName">
+      <!-- ✅ Locked, prefilled name fields -->
+      <fieldset class="readonly">
+        <legend>Registered Name</legend>
+        <label>First Name (As in Passport)</label>
+        <input type="text" id="firstName" name="firstName" readonly required>
 
-      <label>Last Name (As in Passport)</label>
-      <input type="text" id="lastName" name="lastName" required>
+        <label>Middle Name</label>
+        <input type="text" id="middleName" name="middleName" readonly>
 
+        <label>Last Name (As in Passport)</label>
+        <input type="text" id="lastName" name="lastName" readonly required>
+      </fieldset>
+
+      <!-- ✅ Editable fields start here -->
       <label>Passport Number</label>
       <input type="text" id="passport" name="passport" required>
 

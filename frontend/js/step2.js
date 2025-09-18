@@ -46,6 +46,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     paymentStatusEl.textContent = `Payment Status: ${statusData.paymentStatus || "unknown"}`;
     ihcCodeEl.textContent = statusData.ihcCode ? `IHC Code: ${statusData.ihcCode}` : "";
 
+    // After fetching statusData in step2.js
+    if (statusData.fullName) {
+    localStorage.setItem("fullName", statusData.fullName);
+}
+
+
     startBtn.disabled = false;
     startBtn.addEventListener("click", () => {
       window.location.href = "step3.html";
