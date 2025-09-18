@@ -13,23 +13,22 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // Split name into parts just for display (not for submission)
+  // Split name into parts
   const nameParts = fullName.trim().split(" ");
   const firstName = nameParts[0] || "";
   const middleName = nameParts.length === 3 ? nameParts[1] : "";
   const lastName = nameParts[nameParts.length - 1] || "";
 
-  // Populate display-only fields
+  // Prefill + lock name fields
   document.getElementById("firstName").value = firstName;
   document.getElementById("middleName").value = middleName;
   document.getElementById("lastName").value = lastName;
 
-  // Lock fields to prevent editing
   ["firstName", "middleName", "lastName"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.readOnly = true;
-      el.classList.add("readonly"); // optional: style them grey
+      el.classList.add("readonly");
     }
   });
 
@@ -40,15 +39,22 @@ document.addEventListener("DOMContentLoaded", () => {
   bookingForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Collect only booking-related fields (exclude names)
+    // Collect ALL form fields
     const formData = new FormData(bookingForm);
     const data = Object.fromEntries(formData.entries());
 
-    const { bookingDate, timeSlot, passport, paymentMethod } = data;
+    // Ensure userId is always included
+    data.userId = userId;
 
-    if (!bookingDate || !timeSlot || !passport) {
-      alert("Please complete all required fields.");
-      return;
+    // Debug: log payload before sending
+    console.log("Submitting booking data:", data);
+
+    // Validate required fields
+    for (const [key, value] of Object.entries(data)) {
+      if (!value) {
+        alert(`Please fill in the field: ${key}`);
+        return;
+      }
     }
 
     try {
@@ -57,12 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingDate,
-            timeSlot,
-            passport,
-            paymentMethod,
-          }), // ✅ names are NOT sent
+          body: JSON.stringify(data),
         }
       );
 
@@ -82,7 +83,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error("Booking error:", err);
-      alert("Failed to submit booking. Please check your details or try again later.");
+      alert(
+        "Failed to submit booking. Please check your details or try again later."
+      );
     }
   });
 });
