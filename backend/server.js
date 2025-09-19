@@ -115,9 +115,11 @@ app.post("/api/payment/:userId", async (req, res) => {
   }
 });
 
-// 👉 Nodemailer transporter
+// 👉 Nodemailer transporter (now fully env-based, no Gmail hardcoding)
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: process.env.SMTP_HOST,          // e.g. smtp.mailgun.org or smtp.sendgrid.net
+  port: process.env.SMTP_PORT || 587,   // default to 587 if not set
+  secure: process.env.SMTP_SECURE === "true", // true for 465, false for 587
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
