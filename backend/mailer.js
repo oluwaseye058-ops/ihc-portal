@@ -1,5 +1,9 @@
 const nodemailer = require("nodemailer");
-require("dotenv").config();
+
+// ✅ Only load .env locally, never in production
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,             // e.g., smtp-relay.brevo.com
@@ -9,6 +13,14 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,           // Brevo SMTP login
     pass: process.env.SMTP_PASS            // Brevo SMTP key
   }
+});
+
+// ✅ Debug log to confirm environment variables on Render
+console.log("🔎 Using SMTP config:", {
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  user: process.env.SMTP_USER,
+  pass: process.env.SMTP_PASS ? "***" : "MISSING"
 });
 
 async function sendBookingNotification(to, subject, htmlBody) {
