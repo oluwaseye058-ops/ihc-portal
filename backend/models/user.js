@@ -9,4 +9,3 @@ const userSchema = new mongoose.Schema({
 
 module.exports = mongoose.model("User", userSchema);
 
-// NOTE: repo sync test 09/19/2025 23:18:46
