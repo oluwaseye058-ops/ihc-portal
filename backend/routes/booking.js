@@ -1,6 +1,7 @@
+// backend/routes/booking.js
 const express = require("express");
 
-module.exports = function (transporter) {
+module.exports = function (sendBookingNotification) {
   const router = express.Router();
 
   // Temporary in-memory booking store
@@ -26,34 +27,30 @@ module.exports = function (transporter) {
     console.log("📅 New booking received for user:", userId, booking);
 
     // ✅ Send email to staff
-    if (transporter) {
-      try {
-        await transporter.sendMail({
-          from: `"IHC Portal" <${process.env.SMTP_USER}>`,
-          to: process.env.STAFF_EMAIL, // staff recipient
-          subject: `New IHC Booking: ${booking.bookingId}`,
-          text: `
-A new IHC booking has been submitted:
-
-Name: ${booking.firstName} ${booking.middleName || ""} ${booking.lastName}
-Passport: ${booking.passport}
-Nationality: ${booking.nationality}
-Date of Birth: ${booking.dob}
-Address: ${booking.address}
-Company Sponsor: ${booking.sponsorCompany}
-Airline Sponsor: ${booking.sponsorAirline}
-Appointment: ${booking.bookingDate} at ${booking.timeSlot}
-
-Booking ID: ${booking.bookingId}
-User ID: ${userId}
-
-Please review and approve the booking in the portal.
-          `,
-        });
-        console.log("📧 Staff notified via email (initial booking)");
-      } catch (err) {
-        console.error("❌ Error sending staff email:", err);
-      }
+    try {
+      await sendBookingNotification(
+        process.env.STAFF_EMAIL,
+        `New IHC Booking: ${booking.bookingId}`,
+        `
+          <p>A new IHC booking has been submitted:</p>
+          <ul>
+            <li><strong>Name:</strong> ${booking.firstName} ${booking.middleName || ""} ${booking.lastName}</li>
+            <li><strong>Passport:</strong> ${booking.passport}</li>
+            <li><strong>Nationality:</strong> ${booking.nationality}</li>
+            <li><strong>DOB:</strong> ${booking.dob}</li>
+            <li><strong>Address:</strong> ${booking.address}</li>
+            <li><strong>Sponsor Company:</strong> ${booking.sponsorCompany}</li>
+            <li><strong>Sponsor Airline:</strong> ${booking.sponsorAirline}</li>
+            <li><strong>Appointment:</strong> ${booking.bookingDate} at ${booking.timeSlot}</li>
+            <li><strong>Booking ID:</strong> ${booking.bookingId}</li>
+            <li><strong>User ID:</strong> ${userId}</li>
+          </ul>
+          <p>Please review and approve the booking in the portal.</p>
+        `
+      );
+      console.log("📧 Staff notified via email (initial booking)");
+    } catch (err) {
+      console.error("❌ Error sending staff email:", err.message);
     }
 
     res.json({ success: true, booking });
@@ -80,68 +77,57 @@ Please review and approve the booking in the portal.
 
     console.log("💳 Payment method updated:", userBooking);
 
-    if (transporter) {
-      try {
-        // ✅ Notify staff with booking + payment
-        await transporter.sendMail({
-          from: `"IHC Portal" <${process.env.SMTP_USER}>`,
-          to: process.env.STAFF_EMAIL,
-          subject: `Payment Method Submitted: ${userBooking.bookingId}`,
-          text: `
-A candidate has submitted a booking with payment details:
+    try {
+      // ✅ Notify staff with booking + payment
+      await sendBookingNotification(
+        process.env.STAFF_EMAIL,
+        `Payment Method Submitted: ${userBooking.bookingId}`,
+        `
+          <p>A candidate has submitted a booking with payment details:</p>
+          <ul>
+            <li><strong>Name:</strong> ${userBooking.firstName} ${userBooking.middleName || ""} ${userBooking.lastName}</li>
+            <li><strong>Passport:</strong> ${userBooking.passport}</li>
+            <li><strong>Nationality:</strong> ${userBooking.nationality}</li>
+            <li><strong>DOB:</strong> ${userBooking.dob}</li>
+            <li><strong>Address:</strong> ${userBooking.address}</li>
+            <li><strong>Sponsor Company:</strong> ${userBooking.sponsorCompany}</li>
+            <li><strong>Sponsor Airline:</strong> ${userBooking.sponsorAirline}</li>
+            <li><strong>Appointment:</strong> ${userBooking.bookingDate} at ${userBooking.timeSlot}</li>
+            <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
+            <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
+          </ul>
+          <p>Please review and approve this booking in the portal to generate invoice.</p>
+        `
+      );
 
-Name: ${userBooking.firstName} ${userBooking.middleName || ""} ${userBooking.lastName}
-Passport: ${userBooking.passport}
-Nationality: ${userBooking.nationality}
-Date of Birth: ${userBooking.dob}
-Address: ${userBooking.address}
-Company Sponsor: ${userBooking.sponsorCompany}
-Airline Sponsor: ${userBooking.sponsorAirline}
-Appointment: ${userBooking.bookingDate} at ${userBooking.timeSlot}
+      // ✅ Notify candidate
+      await sendBookingNotification(
+        userBooking.email,
+        "IHC Booking Request Received",
+        `
+          <p>Dear ${userBooking.firstName},</p>
+          <p>Your booking request has been received by IHC staff. Please wait for approval before proceeding with payment.</p>
+          <p><strong>Booking Details:</strong></p>
+          <ul>
+            <li><strong>Appointment:</strong> ${userBooking.bookingDate} at ${userBooking.timeSlot}</li>
+            <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
+            <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
+          </ul>
+          <p>Once your booking is approved, you will be able to download your invoice.</p>
+          <p>
+            <a href="${process.env.FRONTEND_URL || "https://ihc-portal1.onrender.com"}/step2.html"
+               style="display:inline-block;padding:12px 24px;background-color:#007bff;color:#ffffff;
+                      text-decoration:none;border-radius:6px;font-weight:bold;">
+              Go to Your Portal
+            </a>
+          </p>
+          <p>Thank you,<br>IHC Team</p>
+        `
+      );
 
-Booking ID: ${userBooking.bookingId}
-Payment Method: ${userBooking.paymentMethod}
-
-Please review and approve this booking in the portal to generate invoice.
-          `,
-        });
-
-        // ✅ Notify candidate
-        await transporter.sendMail({
-          from: `"IHC Portal" <${process.env.SMTP_USER}>`,
-          to: userBooking.email, // candidate email
-          subject: "IHC Booking Request Received",
-          html: `
-<p>Dear ${userBooking.firstName},</p>
-
-<p>Your booking request has been received by IHC staff. Please wait for approval before proceeding with payment.</p>
-
-<p><strong>Booking Details:</strong></p>
-<ul>
-  <li><strong>Appointment:</strong> ${userBooking.bookingDate} at ${userBooking.timeSlot}</li>
-  <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
-  <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
-</ul>
-
-<p>Once your booking is approved, you will be able to download your invoice.</p>
-
-<p>
-  <a href="${process.env.FRONTEND_URL || "https://ihc-portal1.onrender.com"}/step2.html" 
-     style="display:inline-block;padding:12px 24px;background-color:#007bff;color:#ffffff;
-            text-decoration:none;border-radius:6px;font-weight:bold;">
-    Go to Your Portal
-  </a>
-</p>
-
-
-<p>Thank you,<br>IHC Team</p>
-          `,
-        });
-
-        console.log("📧 Staff + candidate notified (payment stage)");
-      } catch (err) {
-        console.error("❌ Error sending payment emails:", err);
-      }
+      console.log("📧 Staff + candidate notified (payment stage)");
+    } catch (err) {
+      console.error("❌ Error sending payment emails:", err.message);
     }
 
     res.json({ success: true, booking: userBooking });
@@ -157,4 +143,3 @@ Please review and approve this booking in the portal to generate invoice.
 
   return router;
 };
-
