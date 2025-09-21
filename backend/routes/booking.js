@@ -1,5 +1,6 @@
 // backend/routes/booking.js
 const express = require("express");
+const User = require("../models/user"); // ✅ get user info from DB
 
 module.exports = function (sendBookingNotification) {
   const router = express.Router();
@@ -16,17 +17,23 @@ module.exports = function (sendBookingNotification) {
       return res.status(400).json({ success: false, message: "Missing required booking fields" });
     }
 
-    // Add booking ID + user link
+    // ✅ Fetch user to ensure we have candidate email
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Add booking details
     booking.bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
     booking.userId = userId;
-    booking.bookingStatus = "pendingApproval"; // default status
+    booking.bookingStatus = "pendingApproval";
+    booking.email = user.email; // ✅ ensure candidate email is stored
 
-    // Save booking
     bookings.push(booking);
 
     console.log("📅 New booking received for user:", userId, booking);
 
-    // ✅ Send email to staff
+    // ✅ Send staff email
     try {
       await sendBookingNotification(
         process.env.STAFF_EMAIL,
@@ -35,6 +42,7 @@ module.exports = function (sendBookingNotification) {
           <p>A new IHC booking has been submitted:</p>
           <ul>
             <li><strong>Name:</strong> ${booking.firstName} ${booking.middleName || ""} ${booking.lastName}</li>
+            <li><strong>Email:</strong> ${booking.email}</li>
             <li><strong>Passport:</strong> ${booking.passport}</li>
             <li><strong>Nationality:</strong> ${booking.nationality}</li>
             <li><strong>DOB:</strong> ${booking.dob}</li>
@@ -56,7 +64,7 @@ module.exports = function (sendBookingNotification) {
     res.json({ success: true, booking });
   });
 
-  // ✅ POST /api/booking/:userId/paymentMethod → save payment method + send emails
+  // ✅ Save payment method + send emails
   router.post("/:userId/paymentMethod", async (req, res) => {
     const { userId } = req.params;
     const { paymentMethod, booking } = req.body;
@@ -65,20 +73,18 @@ module.exports = function (sendBookingNotification) {
       return res.status(400).json({ success: false, message: "Missing payment method" });
     }
 
-    // Find booking
     const userBooking = bookings.find((b) => b.userId === userId && b.bookingId === booking.bookingId);
     if (!userBooking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-    // Save method
     userBooking.paymentMethod = paymentMethod;
     userBooking.bookingStatus = "pendingApproval";
 
     console.log("💳 Payment method updated:", userBooking);
 
     try {
-      // ✅ Notify staff with booking + payment
+      // ✅ Notify staff
       await sendBookingNotification(
         process.env.STAFF_EMAIL,
         `Payment Method Submitted: ${userBooking.bookingId}`,
@@ -86,6 +92,7 @@ module.exports = function (sendBookingNotification) {
           <p>A candidate has submitted a booking with payment details:</p>
           <ul>
             <li><strong>Name:</strong> ${userBooking.firstName} ${userBooking.middleName || ""} ${userBooking.lastName}</li>
+            <li><strong>Email:</strong> ${userBooking.email}</li>
             <li><strong>Passport:</strong> ${userBooking.passport}</li>
             <li><strong>Nationality:</strong> ${userBooking.nationality}</li>
             <li><strong>DOB:</strong> ${userBooking.dob}</li>
@@ -101,31 +108,34 @@ module.exports = function (sendBookingNotification) {
       );
 
       // ✅ Notify candidate
-      await sendBookingNotification(
-        userBooking.email,
-        "IHC Booking Request Received",
-        `
-          <p>Dear ${userBooking.firstName},</p>
-          <p>Your booking request has been received by IHC staff. Please wait for approval before proceeding with payment.</p>
-          <p><strong>Booking Details:</strong></p>
-          <ul>
-            <li><strong>Appointment:</strong> ${userBooking.bookingDate} at ${userBooking.timeSlot}</li>
-            <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
-            <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
-          </ul>
-          <p>Once your booking is approved, you will be able to download your invoice.</p>
-          <p>
-            <a href="${process.env.FRONTEND_URL || "https://ihc-portal1.onrender.com"}/step2.html"
-               style="display:inline-block;padding:12px 24px;background-color:#007bff;color:#ffffff;
-                      text-decoration:none;border-radius:6px;font-weight:bold;">
-              Go to Your Portal
-            </a>
-          </p>
-          <p>Thank you,<br>IHC Team</p>
-        `
-      );
-
-      console.log("📧 Staff + candidate notified (payment stage)");
+      if (userBooking.email) {
+        await sendBookingNotification(
+          userBooking.email,
+          "IHC Booking Request Received",
+          `
+            <p>Dear ${userBooking.firstName},</p>
+            <p>Your booking request has been received by IHC staff. Please wait for approval before proceeding with payment.</p>
+            <p><strong>Booking Details:</strong></p>
+            <ul>
+              <li><strong>Appointment:</strong> ${userBooking.bookingDate} at ${userBooking.timeSlot}</li>
+              <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
+              <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
+            </ul>
+            <p>Once your booking is approved, you will be able to download your invoice.</p>
+            <p>
+              <a href="${process.env.FRONTEND_URL || "https://ihc-portal1.onrender.com"}/step2.html"
+                 style="display:inline-block;padding:12px 24px;background-color:#007bff;color:#ffffff;
+                        text-decoration:none;border-radius:6px;font-weight:bold;">
+                Go to Your Portal
+              </a>
+            </p>
+            <p>Thank you,<br>IHC Team</p>
+          `
+        );
+        console.log("📧 Candidate notified (payment stage)");
+      } else {
+        console.error("❌ Candidate email missing, notification skipped");
+      }
     } catch (err) {
       console.error("❌ Error sending payment emails:", err.message);
     }
