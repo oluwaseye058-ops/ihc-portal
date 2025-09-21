@@ -31,7 +31,7 @@ async function sendBookingNotification(to, subject, htmlBody) {
   }
 
   const mailOptions = {
-    from: `"IHC Portal" <${process.env.SMTP_USER}>`, // ✅ Brevo user or verified domain
+    from: `"IHC Portal" <admin@ihc-bh.com>`, // ✅ Brevo user or verified domain
     replyTo: "admin@ihc-bh.com",
     to,
     subject,
