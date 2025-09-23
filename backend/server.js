@@ -20,7 +20,7 @@ app.use(express.json());
 const authRoutes = require("./routes/auth")(sendBookingNotification);
 app.use("/api/auth", authRoutes);
 
-const invoiceRoutes = require("./backend/invoice")(sendBookingNotification);
+const invoiceRoutes = require("./invoice")(sendBookingNotification);
 app.use("/api/invoice", invoiceRoutes);
 
 // 👉 Debug print env
