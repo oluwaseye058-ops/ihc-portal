@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const requiredFields = [
       "firstName",
       "lastName",
-      "email",
       "passportNumber",
       "bookingDate",
       "timeSlot",
