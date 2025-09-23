@@ -1,67 +1,78 @@
 // backend/routes/booking.js
 const express = require("express");
-const User = require("../models/user"); // ✅ get user info from DB
+const User = require("../models/user");
+const Booking = require("../models/booking"); // ✅ MongoDB model
 
 module.exports = function (sendBookingNotification) {
   const router = express.Router();
 
-  // Temporary in-memory booking store
-  let bookings = [];
-
   // POST /api/booking/:userId → create new booking
   router.post("/:userId", async (req, res) => {
     const { userId } = req.params;
-    const booking = req.body;
+    const bookingData = req.body;
 
-    if (!booking.firstName || !booking.lastName || !booking.bookingDate || !booking.timeSlot) {
+    if (
+      !bookingData.firstName ||
+      !bookingData.lastName ||
+      !bookingData.bookingDate ||
+      !bookingData.timeSlot
+    ) {
       return res.status(400).json({ success: false, message: "Missing required booking fields" });
     }
 
-    // ✅ Fetch user to ensure we have candidate email
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    // Add booking details
-    booking.bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
-    booking.userId = userId;
-    booking.bookingStatus = "pendingApproval";
-    booking.email = user.email; // ✅ ensure candidate email is stored
-
-    bookings.push(booking);
-
-    console.log("📅 New booking received for user:", userId, booking);
-
-    // ✅ Send staff email
     try {
-      await sendBookingNotification(
-        process.env.STAFF_EMAIL,
-        `New IHC Booking: ${booking.bookingId}`,
-        `
-          <p>A new IHC booking has been submitted:</p>
-          <ul>
-            <li><strong>Name:</strong> ${booking.firstName} ${booking.middleName || ""} ${booking.lastName}</li>
-            <li><strong>Email:</strong> ${booking.email}</li>
-            <li><strong>Passport:</strong> ${booking.passport}</li>
-            <li><strong>Nationality:</strong> ${booking.nationality}</li>
-            <li><strong>DOB:</strong> ${booking.dob}</li>
-            <li><strong>Address:</strong> ${booking.address}</li>
-            <li><strong>Sponsor Company:</strong> ${booking.sponsorCompany}</li>
-            <li><strong>Sponsor Airline:</strong> ${booking.sponsorAirline}</li>
-            <li><strong>Appointment:</strong> ${booking.bookingDate} at ${booking.timeSlot}</li>
-            <li><strong>Booking ID:</strong> ${booking.bookingId}</li>
-            <li><strong>User ID:</strong> ${userId}</li>
-          </ul>
-          <p>Please review and approve the booking in the portal.</p>
-        `
-      );
-      console.log("📧 Staff notified via email (initial booking)");
-    } catch (err) {
-      console.error("❌ Error sending staff email:", err.message);
-    }
+      // ✅ Fetch user from DB
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
 
-    res.json({ success: true, booking });
+      // ✅ Create booking doc
+      const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
+      const booking = new Booking({
+        ...bookingData,
+        userId,
+        bookingId,
+        bookingStatus: "pendingApproval",
+        email: user.email,
+      });
+
+      await booking.save();
+      console.log("📅 New booking saved in DB:", booking);
+
+      // ✅ Notify staff
+      try {
+        await sendBookingNotification(
+          process.env.STAFF_EMAIL,
+          `New IHC Booking: ${booking.bookingId}`,
+          `
+            <p>A new IHC booking has been submitted:</p>
+            <ul>
+              <li><strong>Name:</strong> ${booking.firstName} ${booking.middleName || ""} ${booking.lastName}</li>
+              <li><strong>Email:</strong> ${booking.email}</li>
+              <li><strong>Passport:</strong> ${booking.passport}</li>
+              <li><strong>Nationality:</strong> ${booking.nationality}</li>
+              <li><strong>DOB:</strong> ${booking.dob}</li>
+              <li><strong>Address:</strong> ${booking.address}</li>
+              <li><strong>Sponsor Company:</strong> ${booking.sponsorCompany}</li>
+              <li><strong>Sponsor Airline:</strong> ${booking.sponsorAirline}</li>
+              <li><strong>Appointment:</strong> ${booking.bookingDate} at ${booking.timeSlot}</li>
+              <li><strong>Booking ID:</strong> ${booking.bookingId}</li>
+              <li><strong>User ID:</strong> ${userId}</li>
+            </ul>
+            <p>Please review and approve the booking in the portal.</p>
+          `
+        );
+        console.log("📧 Staff notified via email (initial booking)");
+      } catch (err) {
+        console.error("❌ Error sending staff email:", err.message);
+      }
+
+      res.json({ success: true, booking });
+    } catch (err) {
+      console.error("❌ Error creating booking:", err.message);
+      res.status(500).json({ success: false, message: "Server error creating booking" });
+    }
   });
 
   // ✅ Save payment method + send emails
@@ -69,21 +80,22 @@ module.exports = function (sendBookingNotification) {
     const { userId } = req.params;
     const { paymentMethod, booking } = req.body;
 
-    if (!paymentMethod) {
-      return res.status(400).json({ success: false, message: "Missing payment method" });
+    if (!paymentMethod || !booking?.bookingId) {
+      return res.status(400).json({ success: false, message: "Missing payment method or bookingId" });
     }
-
-    const userBooking = bookings.find((b) => b.userId === userId && b.bookingId === booking.bookingId);
-    if (!userBooking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
-    }
-
-    userBooking.paymentMethod = paymentMethod;
-    userBooking.bookingStatus = "pendingApproval";
-
-    console.log("💳 Payment method updated:", userBooking);
 
     try {
+      const userBooking = await Booking.findOne({ userId, bookingId: booking.bookingId });
+      if (!userBooking) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      userBooking.paymentMethod = paymentMethod;
+      userBooking.bookingStatus = "pendingApproval";
+      await userBooking.save();
+
+      console.log("💳 Payment method updated in DB:", userBooking);
+
       // ✅ Notify staff
       await sendBookingNotification(
         process.env.STAFF_EMAIL,
@@ -133,22 +145,25 @@ module.exports = function (sendBookingNotification) {
           `
         );
         console.log("📧 Candidate notified (payment stage)");
-      } else {
-        console.error("❌ Candidate email missing, notification skipped");
       }
-    } catch (err) {
-      console.error("❌ Error sending payment emails:", err.message);
-    }
 
-    res.json({ success: true, booking: userBooking });
+      res.json({ success: true, booking: userBooking });
+    } catch (err) {
+      console.error("❌ Error updating payment method:", err.message);
+      res.status(500).json({ success: false, message: "Server error updating payment method" });
+    }
   });
 
   // GET /api/booking/:userId → fetch all bookings for a user
-  router.get("/:userId", (req, res) => {
+  router.get("/:userId", async (req, res) => {
     const { userId } = req.params;
-    const userBookings = bookings.filter((b) => b.userId === userId);
-
-    res.json({ success: true, bookings: userBookings });
+    try {
+      const userBookings = await Booking.find({ userId });
+      res.json({ success: true, bookings: userBookings });
+    } catch (err) {
+      console.error("❌ Error fetching bookings:", err.message);
+      res.status(500).json({ success: false, message: "Server error fetching bookings" });
+    }
   });
 
   return router;

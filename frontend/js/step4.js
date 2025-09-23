@@ -6,13 +6,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   const invoiceContainer = document.getElementById("invoiceContainer");
   const invoiceLink = document.getElementById("invoiceLink");
 
-  // ✅ Get booking info from localStorage
-  const bookingData = JSON.parse(localStorage.getItem("booking"));
   const userId = localStorage.getItem("userId");
 
-  if (!bookingData || !userId) {
-    alert("No booking found. Please complete Step 3 first.");
-    window.location.href = "step3.html";
+  if (!userId) {
+    alert("Session expired. Please login again.");
+    window.location.href = "login.html";
+    return;
+  }
+
+  let bookingData = null;
+
+  try {
+    // ✅ Fetch latest booking from backend
+    const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`);
+    if (!res.ok) {
+      throw new Error("Failed to fetch booking details");
+    }
+    bookingData = await res.json();
+
+    if (!bookingData) {
+      alert("No booking found. Please complete Step 3 first.");
+      window.location.href = "step3.html";
+      return;
+    }
+  } catch (err) {
+    console.error("Error fetching booking:", err);
+    alert("Unable to load booking details. Please try again later.");
     return;
   }
 
@@ -26,12 +45,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     <p><strong>Company Sponsor:</strong> ${bookingData.sponsorCompany}</p>
     <p><strong>Airline Sponsor:</strong> ${bookingData.sponsorAirline}</p>
     <p><strong>Appointment:</strong> ${bookingData.bookingDate} at ${bookingData.timeSlot}</p>
+    <p><strong>Status:</strong> ${bookingData.bookingStatus}</p>
   `;
 
-  // ✅ Hide invoice unless booking approved
+  // ✅ Show invoice only if booking approved
   if (bookingData.bookingStatus === "approved") {
     invoiceContainer.style.display = "block";
     invoiceLink.href = bookingData.invoiceUrl || "#";
+  } else {
+    invoiceContainer.style.display = "none";
   }
 
   // ✅ Payment form handling
@@ -45,26 +67,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      // ✅ Send to backend
-      const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}/paymentMethod`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod: method, booking: bookingData }),
-      });
+      const res = await fetch(
+        `https://ihc-portal.onrender.com/api/booking/${userId}/paymentMethod`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentMethod: method, booking: bookingData }),
+        }
+      );
 
       if (res.ok) {
         const result = await res.json();
 
-        // Update local copy with pending status
+        // Update localStorage with new data
         bookingData.paymentMethod = method;
         bookingData.bookingStatus = "pendingApproval";
         localStorage.setItem("booking", JSON.stringify(bookingData));
 
-        alert("Booking Completed. IHC staff will generate your invoice once your booking request has been approved. Please check your email.");
+        alert(
+          "Booking Completed. IHC staff will generate your invoice once your booking request has been approved. Please check your email."
+        );
         window.location.href = "step2.html"; // ✅ Redirect back to portal
       } else {
         const error = await res.json();
-        alert(`Failed to submit payment method: ${error.message || "Unknown error"}`);
+        alert(
+          `Failed to submit payment method: ${error.message || "Unknown error"}`
+        );
       }
     } catch (err) {
       console.error("Payment method error:", err);
@@ -72,4 +100,3 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
-
