@@ -121,6 +121,7 @@ module.exports = function (sendBookingNotification) {
 
       // ✅ Notify candidate
       if (userBooking.email) {
+        const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal.onrender.com";
         await sendBookingNotification(
           userBooking.email,
           "IHC Booking Request Received",
@@ -135,7 +136,7 @@ module.exports = function (sendBookingNotification) {
             </ul>
             <p>Once your booking is approved, you will be able to download your invoice.</p>
             <p>
-              <a href="${process.env.FRONTEND_URL || "https://ihc-portal1.onrender.com"}/step2.html"
+              <a href="${frontendUrl}/step2.html"
                  style="display:inline-block;padding:12px 24px;background-color:#007bff;color:#ffffff;
                         text-decoration:none;border-radius:6px;font-weight:bold;">
                 Go to Your Portal

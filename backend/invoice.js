@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ✅ Render booking details
     bookingDetailsEl.innerHTML = `
       <p><strong>Name:</strong> ${booking.firstName} ${booking.middleName || ''} ${booking.lastName}</p>
-      <p><strong>Passport:</strong> ${booking.passport}</p>
+      <p><strong>Passport:</strong> ${booking.passportNumber}</p>
       <p><strong>Nationality:</strong> ${booking.nationality}</p>
       <p><strong>Date of Birth:</strong> ${booking.dob}</p>
       <p><strong>Address:</strong> ${booking.address}</p>
