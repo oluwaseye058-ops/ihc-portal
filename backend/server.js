@@ -5,6 +5,13 @@ const path = require("path");
 const cors = require("cors");
 require("dotenv").config(); // ✅ load env variables
 
+const sendBookingNotification = require("./mailer"); // ✅ must load before using in routes
+const User = require("./models/user");
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
 // 👉 Connect to MongoDB
 console.log("MONGODB_URI:", process.env.MONGODB_URI);
 mongoose
@@ -15,16 +22,12 @@ mongoose
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// 👉 Load User model
-const User = require("./models/user");
-const sendBookingNotification = require("./mailer");
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
 // 👉 Serve frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));
+
+// 👉 Import auth routes AFTER mailer + app exist
+const authRoutes = require("./routes/auth");
+app.use("/api/auth", authRoutes(sendBookingNotification));
 
 /**
  * Registration endpoint
@@ -49,17 +52,11 @@ app.post("/api/register", async (req, res) => {
       fullName,
       email,
       paymentStatus: "pending",
+      password: "changeme123", // ⚠️ TEMP placeholder until proper register form
     });
 
     await newUser.save();
     console.log("✅ New registration:", newUser);
-
-    // (Optional) Send welcome/verification email here
-    // await sendBookingNotification(
-    //   newUser.email,
-    //   "Welcome to IHC",
-    //   `<p>Dear ${newUser.fullName},</p><p>Thank you for registering. Please proceed with payment to complete your booking.</p>`
-    // );
 
     res.json({ success: true, userId: newUser._id });
   } catch (err) {
@@ -111,7 +108,6 @@ app.post("/api/payment/:userId", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // For now, all payments except "card" auto-confirm
     if (method && method !== "card") {
       user.paymentStatus = "confirmed";
     }

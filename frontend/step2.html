@@ -15,7 +15,7 @@
     <!-- Progress bar -->
     <div class="progress-container">
       <a href="step1.html" class="progress-step" data-step="1">Register</a>
-      <a href="step2.html" class="progress-step" data-step="2">Portal</a>
+      <a href="step2.html" class="progress-step active" data-step="2">Portal</a>
       <a href="step3.html" class="progress-step" data-step="3">Booking</a>
       <a href="step4.html" class="progress-step" data-step="4">Payment</a>
       <a href="step5.html" class="progress-step" data-step="5">Confirm</a>
@@ -26,6 +26,7 @@
     <p id="paymentStatus"></p>
     <p id="ihcCode"></p>
     <button id="startBooking">Start New Booking</button>
+    <button id="logoutBtn" style="background:#d9534f;color:#fff;">Logout</button>
 
     <!-- ✅ New section for displaying bookings -->
     <section>
@@ -35,7 +36,6 @@
       </ul>
       <p id="bookingStatus"></p>
       <button id="invoiceBtn" style="display:none;">View Invoice</button>
-
     </section>
   </main>
 
@@ -47,4 +47,3 @@
   <script src="js/step2.js"></script>
 </body>
 </html>
-

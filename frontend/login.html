@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IHC Portal - Login</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h2>Login to IHC Portal</h2>
+  <form id="loginForm">
+    <label>Email</label>
+    <input type="email" id="email" required>
+    <label>Password</label>
+    <input type="password" id="password" required>
+    <button type="submit">Login</button>
+  </form>
+  <p><a href="forgot-password.html">Forgot your password?</a></p>
+
+  <script>
+    const API_BASE = "https://ihc-portal.onrender.com/api/auth";
+  
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+  
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+  
+      try {
+        const res = await fetch(`${API_BASE}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+  
+        if (data.success) {
+          localStorage.setItem("token", data.token); // save JWT
+          localStorage.setItem("userId", data.userId);
+          localStorage.setItem("fullName", data.fullName);
+          alert("Login successful!");
+          window.location.href = "step2.html"; // candidate dashboard
+        } else {
+          alert(data.error || "Login failed");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server error during login");
+      }
+    });
+  </script>
+  
+</body>
+</html>
