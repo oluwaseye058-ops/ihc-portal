@@ -20,6 +20,9 @@ app.use(express.json());
 const authRoutes = require("./routes/auth")(sendBookingNotification);
 app.use("/api/auth", authRoutes);
 
+const invoiceRoutes = require("./backend/invoice")(sendBookingNotification);
+app.use("/api/invoice", invoiceRoutes);
+
 // 👉 Debug print env
 console.log("MONGODB_URI:", process.env.MONGODB_URI);
 console.log("SMTP_HOST:", process.env.SMTP_HOST);

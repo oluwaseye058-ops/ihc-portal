@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IHC Admin - Approve Booking</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <h2>Approve Booking</h2>
+    <form id="approveForm">
+      <label>Booking ID:</label>
+      <input type="text" id="bookingId" required>
+
+      <label>Invoice URL:</label>
+      <input type="url" id="invoiceUrl" required>
+
+      <button type="submit">Approve & Save</button>
+    </form>
+    <div id="message"></div>
+  </main>
+  <script>
+    document.getElementById("approveForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const bookingId = document.getElementById("bookingId").value.trim();
+      const invoiceUrl = document.getElementById("invoiceUrl").value.trim();
+      const messageEl = document.getElementById("message");
+
+      try {
+        const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${bookingId}/approve`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ invoiceUrl }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          messageEl.innerHTML = "<p style='color:green;'>Booking approved successfully!</p>";
+        } else {
+          messageEl.innerHTML = `<p style='color:red;'>${data.error || 'Failed to approve'}</p>`;
+        }
+      } catch (err) {
+        console.error(err);
+        messageEl.innerHTML = "<p style='color:red;'>Server error</p>";
+      }
+    });
+  </script>
+</body>
+</html>

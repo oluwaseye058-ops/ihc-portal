@@ -155,6 +155,51 @@ module.exports = function (sendBookingNotification) {
     }
   });
 
+  // ✅ Approve booking + generate invoice
+  router.put("/:bookingId/approve", async (req, res) => {
+    try {
+      const { bookingId } = req.params;
+      const { invoiceUrl } = req.body; // URL of the invoice PDF or file
+
+      const booking = await Booking.findOne({ bookingId });
+      if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+      booking.bookingStatus = "approved";
+      booking.invoiceUrl = invoiceUrl;
+      await booking.save();
+
+      console.log("✅ Booking approved:", booking);
+
+      // ✅ Notify candidate
+      if (booking.email) {
+        const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
+        await sendBookingNotification(
+          booking.email,
+          "IHC Booking Approved – Invoice Available",
+          `
+            <p>Dear ${booking.firstName},</p>
+            <p>Your booking <strong>${booking.bookingId}</strong> has been approved.</p>
+            <p>You may now download your invoice from the portal.</p>
+            <p>
+              <a href="${frontendUrl}/invoice.html"
+                 style="display:inline-block;padding:12px 24px;background-color:#28a745;color:#ffffff;
+                        text-decoration:none;border-radius:6px;font-weight:bold;">
+                View Invoice
+              </a>
+            </p>
+            <p>Thank you,<br>IHC Team</p>
+          `
+        );
+        console.log("📧 Candidate notified (approval stage)");
+      }
+
+      res.json({ success: true, booking });
+    } catch (err) {
+      console.error("❌ Approve booking error:", err);
+      res.status(500).json({ error: "Server error updating booking" });
+    }
+  });
+
   // GET /api/booking/:userId → fetch all bookings for a user
   router.get("/:userId", async (req, res) => {
     const { userId } = req.params;
