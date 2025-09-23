@@ -10,6 +10,10 @@ const jwt = require("jsonwebtoken");
 const sendBookingNotification = require("./mailer"); // mailer
 const User = require("./models/user");
 
+const authRoutes = require("./routes/auth")(sendBookingNotification);
+app.use("/api/auth", authRoutes);
+
+
 const app = express();
 app.use(cors());
 app.use(express.json());
