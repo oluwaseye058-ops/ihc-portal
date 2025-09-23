@@ -1,16 +1,12 @@
-// js/step2.js
-const API_BASE = "https://ihc-portal.onrender.com";  // 👈 your Render backend
+const API_BASE = "https://ihc-portal.onrender.com";
 
-// Get JWT token from localStorage
 const token = localStorage.getItem("token");
 
-// Redirect if no token
 if (!token) {
   alert("Please login first.");
   window.location.href = "login.html";
 }
 
-// Helper: Logout
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("userId");
@@ -18,7 +14,6 @@ function logout() {
   window.location.href = "login.html";
 }
 
-// Helper: View invoice
 window.viewInvoice = function (booking) {
   if (!booking) return;
   localStorage.setItem("selectedBookingId", booking.bookingId);
@@ -35,13 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const invoiceBtn = document.getElementById("invoiceBtn");
   const bookingList = document.getElementById("bookingList");
 
-  if (!welcomeEl || !paymentStatusEl || !ihcCodeEl || !startBtn || !bookingList) {
-    console.error("Missing expected DOM elements in step2.html");
-    return;
-  }
-
   try {
-    // ✅ Fetch user profile via JWT
     const statusRes = await fetch(`${API_BASE}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -53,24 +42,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const statusData = await statusRes.json();
-
-    // Show user details
     const user = statusData.user;
+
     welcomeEl.textContent = `Welcome ${user.fullName || "Registered User"}`;
     paymentStatusEl.textContent = `Payment Status: ${user.paymentStatus || "unknown"}`;
     ihcCodeEl.textContent = user.ihcCode ? `IHC Code: ${user.ihcCode}` : "";
 
-    // Store locally for later use
     localStorage.setItem("fullName", user.fullName);
     localStorage.setItem("userId", user._id);
 
-    // ✅ Start booking
     startBtn.disabled = false;
     startBtn.addEventListener("click", () => {
       window.location.href = "step3.html";
     });
 
-    // ✅ Add logout button dynamically
     const logoutBtn = document.createElement("button");
     logoutBtn.textContent = "Logout";
     logoutBtn.className = "btn btn-small";
@@ -79,29 +64,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     welcomeEl.insertAdjacentElement("afterend", logoutBtn);
 
     // ✅ Fetch bookings
-    try {
-      const bookingRes = await fetch(`${API_BASE}/api/booking/${user._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const bookingRes = await fetch(`${API_BASE}/api/booking/${user._id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      if (!bookingRes.ok) {
-        bookingList.innerHTML = "<li>No bookings found.</li>";
-        bookingStatusEl.textContent = "Booking information unavailable.";
-        if (invoiceBtn) invoiceBtn.style.display = "none";
-        return;
-      }
+    const bookingData = await bookingRes.json();
+    const userBookings = bookingData.bookings || [];
 
-      const bookingData = await bookingRes.json();
-      const userBookings = (bookingData && bookingData.bookings) ? bookingData.bookings : [];
-
-      if (userBookings.length === 0) {
-        bookingList.innerHTML = "<li>No bookings found.</li>";
-        bookingStatusEl.textContent = "No bookings yet.";
-        if (invoiceBtn) invoiceBtn.style.display = "none";
-        return;
-      }
-
-      bookingList.innerHTML = "";
+    bookingList.innerHTML = "";
+    if (userBookings.length === 0) {
+      bookingList.innerHTML = "<li>No bookings found.</li>";
+      bookingStatusEl.textContent = "No bookings yet.";
+      if (invoiceBtn) invoiceBtn.style.display = "none";
+    } else {
       userBookings.forEach((b) => {
         const li = document.createElement("li");
         li.className = "booking-item";
@@ -114,7 +89,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             <p><strong>Payment Method:</strong> ${b.paymentMethod || "Not selected"}</p>
           </div>
         `;
-
         if (b.bookingStatus === "approved" && b.invoiceUrl) {
           const btn = document.createElement("button");
           btn.type = "button";
@@ -123,28 +97,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           btn.addEventListener("click", () => window.viewInvoice(b));
           li.appendChild(btn);
         }
-
         bookingList.appendChild(li);
       });
 
-      // Show latest booking status
       const latest = userBookings[userBookings.length - 1];
       if (latest) {
-        if (latest.bookingStatus === "approved") {
-          bookingStatusEl.textContent = "Booking Approved";
-          if (invoiceBtn) {
-            invoiceBtn.style.display = "inline-block";
-            invoiceBtn.onclick = () => window.viewInvoice(latest);
-          }
-        } else {
-          bookingStatusEl.textContent = "Booking Approval Pending – No invoice yet";
-          if (invoiceBtn) invoiceBtn.style.display = "none";
+        bookingStatusEl.textContent = latest.bookingStatus === "approved" ? "Booking Approved" : "Booking Approval Pending – No invoice yet";
+        if (invoiceBtn) {
+          invoiceBtn.style.display = latest.bookingStatus === "approved" ? "inline-block" : "none";
+          invoiceBtn.onclick = () => window.viewInvoice(latest);
         }
       }
-    } catch (err) {
-      console.error("Booking fetch error:", err);
-      bookingStatusEl.textContent = "Unable to load bookings.";
-      if (invoiceBtn) invoiceBtn.style.display = "none";
     }
   } catch (err) {
     console.error("Portal error:", err);

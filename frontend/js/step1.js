@@ -24,18 +24,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
 
       if (data.success) {
-        // Save userId for Step 2 portal
+        // ✅ Save JWT and userId for Step 2
+        localStorage.setItem("token", data.token);
         sessionStorage.setItem("userId", data.userId);
         localStorage.setItem("userId", data.userId);
 
         if (data.existing) {
-          // Existing user → redirect to login
-          alert("You are already registered. Please login first.");
-          window.location.href = "login.html";
-        } else {
-          // New user → go to portal
-          window.location.href = "step2.html";
+          alert("You are already registered. Redirecting to your portal...");
         }
+
+        window.location.href = "step2.html";
       } else {
         alert("Registration failed. Try again.");
       }

@@ -1,10 +1,11 @@
 // ✅ Load environment variables first
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") }); 
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 
 const sendBookingNotification = require("./mailer"); // mailer
 const User = require("./models/user");
@@ -24,19 +25,12 @@ if (!process.env.MONGODB_URI) {
 }
 
 mongoose
-  .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // 👉 Serve frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));
-
-// 👉 Import auth routes
-const authRoutes = require("./routes/auth");
-app.use("/api/auth", authRoutes(sendBookingNotification));
 
 /**
  * Registration endpoint
@@ -48,26 +42,76 @@ app.post("/api/register", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.json({ success: true, userId: existingUser._id, existing: true });
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // Existing user → generate JWT anyway
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
+      return res.json({ success: true, userId: user._id, existing: true, token });
     }
 
     const fullName = `${firstName} ${middleName || ""} ${lastName}`.trim();
-    const newUser = new User({
+    user = new User({
       fullName,
       email,
       paymentStatus: "pending",
       password: "changeme123",
     });
 
-    await newUser.save();
-    console.log("✅ New registration:", newUser);
+    await user.save();
+    console.log("✅ New registration:", user);
 
-    res.json({ success: true, userId: newUser._id });
+    // Generate JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
+
+    res.json({ success: true, userId: user._id, token });
   } catch (err) {
     console.error("❌ Registration error:", err);
     res.status(500).json({ error: "Server error during registration" });
+  }
+});
+
+/**
+ * Login endpoint
+ */
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Generate JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
+
+    res.json({ success: true, userId: user._id, token });
+  } catch (err) {
+    console.error("❌ Login error:", err);
+    res.status(500).json({ error: "Server error during login" });
+  }
+});
+
+/**
+ * Get current user (me)
+ */
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({ user });
+  } catch (err) {
+    console.error("❌ /me error:", err);
+    res.status(401).json({ error: "Invalid or expired token" });
   }
 });
 
