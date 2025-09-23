@@ -121,7 +121,7 @@ module.exports = function (sendBookingNotification) {
 
       // ✅ Notify candidate
       if (userBooking.email) {
-        const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal.onrender.com";
+        const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
         await sendBookingNotification(
           userBooking.email,
           "IHC Booking Request Received",
