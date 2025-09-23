@@ -6,11 +6,12 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs"); // ✅ For password hashing
 
 const sendBookingNotification = require("./mailer"); // mailer
 const User = require("./models/user");
 
-
+// 👉 Initialize app
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -42,25 +43,24 @@ app.use(express.static(path.join(__dirname, "../frontend")));
  */
 app.post("/api/register", async (req, res) => {
   try {
-    const { firstName, middleName, lastName, email } = req.body;
-    if (!firstName || !lastName || !email) {
+    const { firstName, middleName, lastName, email, password } = req.body;
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    let user = await User.findOne({ email });
-
-    if (user) {
-      // Existing user → generate JWT anyway
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
-      return res.json({ success: true, userId: user._id, existing: true, token });
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ error: "Email already registered" });
     }
 
     const fullName = `${firstName} ${middleName || ""} ${lastName}`.trim();
-    user = new User({
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = new User({
       fullName,
       email,
+      password: hashedPassword,
       paymentStatus: "pending",
-      password: "changeme123",
     });
 
     await user.save();
@@ -81,16 +81,19 @@ app.post("/api/register", async (req, res) => {
  */
 app.post("/api/login", async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: "Email required" });
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: "Email and password required" });
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
     // Generate JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
 
-    res.json({ success: true, userId: user._id, token });
+    res.json({ success: true, userId: user._id, fullName: user.fullName, token });
   } catch (err) {
     console.error("❌ Login error:", err);
     res.status(500).json({ error: "Server error during login" });
@@ -110,7 +113,7 @@ app.get("/api/auth/me", async (req, res) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
 
     res.json({ user });
