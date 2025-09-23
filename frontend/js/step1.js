@@ -1,5 +1,3 @@
-// Step1.js – handles registration form submission
-
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("registrationForm");
 
@@ -25,15 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await response.json();
 
-      if (response.status === 409) {
-        alert("This email is already registered. Please use another email.");
-        return;
-      }
-
       if (data.success) {
-        // Save userId in sessionStorage for Step 2
+        // Save userId in sessionStorage/localStorage for Step 2
         sessionStorage.setItem("userId", data.userId);
         localStorage.setItem("userId", data.userId);
+
+        if (data.existing) {
+          alert("You are already registered. Redirecting to your portal...");
+        }
+
         window.location.href = "step2.html";
       } else {
         alert("Registration failed. Try again.");
@@ -44,4 +42,3 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-

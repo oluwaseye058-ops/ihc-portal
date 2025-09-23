@@ -1,11 +1,10 @@
-// backend/server.js
 const mongoose = require("mongoose");
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
 require("dotenv").config(); // ✅ load env variables
 
-const sendBookingNotification = require("./mailer"); // ✅ must load before using in routes
+const sendBookingNotification = require("./mailer"); // ✅ mailer
 const User = require("./models/user");
 
 const app = express();
@@ -25,12 +24,14 @@ mongoose
 // 👉 Serve frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// 👉 Import auth routes AFTER mailer + app exist
+// 👉 Import auth routes
 const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes(sendBookingNotification));
 
 /**
  * Registration endpoint
+ * - If email exists: returns userId + existing flag (redirect to portal)
+ * - If new: creates user and returns userId
  */
 app.post("/api/register", async (req, res) => {
   try {
@@ -40,10 +41,10 @@ app.post("/api/register", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ error: "Email already registered" });
+      // ✅ Existing user: return userId and existing=true
+      return res.json({ success: true, userId: existingUser._id, existing: true });
     }
 
     const fullName = `${firstName} ${middleName || ""} ${lastName}`.trim();
@@ -52,7 +53,7 @@ app.post("/api/register", async (req, res) => {
       fullName,
       email,
       paymentStatus: "pending",
-      password: "changeme123", // ⚠️ TEMP placeholder until proper register form
+      password: "changeme123", // ⚠️ TEMP placeholder until proper password
     });
 
     await newUser.save();
