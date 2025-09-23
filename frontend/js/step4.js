@@ -17,18 +17,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   let bookingData = null;
 
   try {
-    // ✅ Fetch latest booking from backend
+    // ✅ Fetch latest bookings from backend
     const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`);
     if (!res.ok) {
       throw new Error("Failed to fetch booking details");
     }
-    bookingData = await res.json();
+    const data = await res.json();
 
-    if (!bookingData) {
+    if (!data.success || !data.bookings || data.bookings.length === 0) {
       alert("No booking found. Please complete Step 3 first.");
       window.location.href = "step3.html";
       return;
     }
+
+    // ✅ Always take the most recent booking
+    bookingData = data.bookings[data.bookings.length - 1];
   } catch (err) {
     console.error("Error fetching booking:", err);
     alert("Unable to load booking details. Please try again later.");
@@ -38,14 +41,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ✅ Render booking summary
   bookingSummaryEl.innerHTML = `
     <p><strong>Name:</strong> ${bookingData.firstName} ${bookingData.middleName || ''} ${bookingData.lastName}</p>
-    <p><strong>Passport:</strong> ${bookingData.passportNumber}</p>
-    <p><strong>Nationality:</strong> ${bookingData.nationality}</p>
-    <p><strong>Date of Birth:</strong> ${bookingData.dob}</p>
-    <p><strong>Address:</strong> ${bookingData.address}</p>
-    <p><strong>Company Sponsor:</strong> ${bookingData.sponsorCompany}</p>
-    <p><strong>Airline Sponsor:</strong> ${bookingData.sponsorAirline}</p>
-    <p><strong>Appointment:</strong> ${bookingData.bookingDate} at ${bookingData.timeSlot}</p>
-    <p><strong>Status:</strong> ${bookingData.bookingStatus}</p>
+    <p><strong>Passport:</strong> ${bookingData.passportNumber || bookingData.passport || ''}</p>
+    <p><strong>Nationality:</strong> ${bookingData.nationality || ''}</p>
+    <p><strong>Date of Birth:</strong> ${bookingData.dob || ''}</p>
+    <p><strong>Address:</strong> ${bookingData.address || ''}</p>
+    <p><strong>Company Sponsor:</strong> ${bookingData.sponsorCompany || ''}</p>
+    <p><strong>Airline Sponsor:</strong> ${bookingData.sponsorAirline || ''}</p>
+    <p><strong>Appointment:</strong> ${bookingData.bookingDate || ''} at ${bookingData.timeSlot || ''}</p>
+    <p><strong>Status:</strong> ${bookingData.bookingStatus || 'N/A'}</p>
   `;
 
   // ✅ Show invoice only if booking approved
