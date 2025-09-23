@@ -77,30 +77,6 @@ app.post("/api/register", async (req, res) => {
 });
 
 /**
- * Login endpoint
- */
-app.post("/api/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: "Email and password required" });
-
-    const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
-
-    // Generate JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
-
-    res.json({ success: true, userId: user._id, fullName: user.fullName, token });
-  } catch (err) {
-    console.error("❌ Login error:", err);
-    res.status(500).json({ error: "Server error during login" });
-  }
-});
-
-/**
  * Get current user (me)
  */
 app.get("/api/auth/me", async (req, res) => {
