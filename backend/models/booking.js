@@ -10,7 +10,7 @@ const bookingSchema = new mongoose.Schema(
     lastName: { type: String, required: true },
     email: { type: String, required: true }, // from User model
 
-    passport: { type: String },
+    passportNumber: { type: String },
     nationality: { type: String },
     dob: { type: String },
     address: { type: String },

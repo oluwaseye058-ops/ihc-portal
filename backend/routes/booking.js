@@ -50,7 +50,7 @@ module.exports = function (sendBookingNotification) {
             <ul>
               <li><strong>Name:</strong> ${booking.firstName} ${booking.middleName || ""} ${booking.lastName}</li>
               <li><strong>Email:</strong> ${booking.email}</li>
-              <li><strong>Passport:</strong> ${booking.passport}</li>
+              <li><strong>Passport:</strong> ${booking.passportNumber}</li>
               <li><strong>Nationality:</strong> ${booking.nationality}</li>
               <li><strong>DOB:</strong> ${booking.dob}</li>
               <li><strong>Address:</strong> ${booking.address}</li>
@@ -105,7 +105,7 @@ module.exports = function (sendBookingNotification) {
           <ul>
             <li><strong>Name:</strong> ${userBooking.firstName} ${userBooking.middleName || ""} ${userBooking.lastName}</li>
             <li><strong>Email:</strong> ${userBooking.email}</li>
-            <li><strong>Passport:</strong> ${userBooking.passport}</li>
+            <li><strong>Passport:</strong> ${userBooking.passportNumber}</li>
             <li><strong>Nationality:</strong> ${userBooking.nationality}</li>
             <li><strong>DOB:</strong> ${userBooking.dob}</li>
             <li><strong>Address:</strong> ${userBooking.address}</li>
