@@ -24,15 +24,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
 
       if (data.success) {
-        // Save userId in sessionStorage/localStorage for Step 2
+        // Save userId for Step 2 portal
         sessionStorage.setItem("userId", data.userId);
         localStorage.setItem("userId", data.userId);
 
         if (data.existing) {
-          alert("You are already registered. Redirecting to your portal...");
+          // Existing user → redirect to login
+          alert("You are already registered. Please login first.");
+          window.location.href = "login.html";
+        } else {
+          // New user → go to portal
+          window.location.href = "step2.html";
         }
-
-        window.location.href = "step2.html";
       } else {
         alert("Registration failed. Try again.");
       }
