@@ -1,5 +1,3 @@
-// js/step3.js
-
 document.addEventListener("DOMContentLoaded", () => {
   const bookingForm = document.getElementById("bookingForm");
   const dateInput = document.getElementById("bookingDate");
@@ -39,19 +37,28 @@ document.addEventListener("DOMContentLoaded", () => {
   bookingForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Collect ALL form fields
+    // Collect form fields
     const formData = new FormData(bookingForm);
     const data = Object.fromEntries(formData.entries());
 
     // Ensure userId is always included
     data.userId = userId;
 
-    // Debug: log payload before sending
+    // Debug: log payload
     console.log("Submitting booking data:", data);
 
-    // Validate required fields
-    for (const [key, value] of Object.entries(data)) {
-      if (!value) {
+    // Validate required fields only
+    const requiredFields = [
+      "firstName",
+      "lastName",
+      "email",
+      "passportNumber",
+      "bookingDate",
+      "timeSlot",
+    ]; // exclude middleName
+
+    for (const key of requiredFields) {
+      if (!data[key]) {
         alert(`Please fill in the field: ${key}`);
         return;
       }
@@ -89,4 +96,3 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-
