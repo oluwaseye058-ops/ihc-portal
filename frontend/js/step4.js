@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ✅ Render booking summary
   bookingSummaryEl.innerHTML = `
     <p><strong>Name:</strong> ${bookingData.firstName} ${bookingData.middleName || ''} ${bookingData.lastName}</p>
-    <p><strong>Passport:</strong> ${bookingData.passportNumber || bookingData.passport || ''}</p>
+    <p><strong>Passport:</strong> ${bookingData.passportNumber || bookingData.passportNumber || ''}</p>
     <p><strong>Nationality:</strong> ${bookingData.nationality || ''}</p>
     <p><strong>Date of Birth:</strong> ${bookingData.dob || ''}</p>
     <p><strong>Address:</strong> ${bookingData.address || ''}</p>
