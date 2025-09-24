@@ -1,13 +1,14 @@
 // js/step4.js
-
 document.addEventListener("DOMContentLoaded", async () => {
   const bookingSummaryEl = document.getElementById("bookingSummary");
   const paymentForm = document.getElementById("paymentForm");
+  const paymentMethodEl = document.getElementById("paymentMethod");
   const invoiceContainer = document.getElementById("invoiceContainer");
   const invoiceLink = document.getElementById("invoiceLink");
+  const ihcCodeContainer = document.getElementById("ihcCodeContainer");
+  const ihcCodeEl = document.getElementById("ihcCode");
 
   const userId = localStorage.getItem("userId");
-
   if (!userId) {
     alert("Session expired. Please login again.");
     window.location.href = "login.html";
@@ -17,53 +18,64 @@ document.addEventListener("DOMContentLoaded", async () => {
   let bookingData = null;
 
   try {
-    // ✅ Fetch latest bookings from backend
+    // Fetch latest bookings
     const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`);
-    if (!res.ok) {
-      throw new Error("Failed to fetch booking details");
-    }
-    const data = await res.json();
+    if (!res.ok) throw new Error("Failed to fetch booking details");
 
+    const data = await res.json();
     if (!data.success || !data.bookings || data.bookings.length === 0) {
       alert("No booking found. Please complete Step 3 first.");
       window.location.href = "step3.html";
       return;
     }
 
-    // ✅ Always take the most recent booking
+    // Take the most recent booking
     bookingData = data.bookings[data.bookings.length - 1];
+
   } catch (err) {
     console.error("Error fetching booking:", err);
     alert("Unable to load booking details. Please try again later.");
     return;
   }
 
-  // ✅ Render booking summary
+  // Render booking summary
   bookingSummaryEl.innerHTML = `
-    <p><strong>Name:</strong> ${bookingData.firstName} ${bookingData.middleName || ''} ${bookingData.lastName}</p>
-    <p><strong>Passport:</strong> ${bookingData.passportNumber || bookingData.passportNumber || ''}</p>
-    <p><strong>Nationality:</strong> ${bookingData.nationality || ''}</p>
-    <p><strong>Date of Birth:</strong> ${bookingData.dob || ''}</p>
-    <p><strong>Address:</strong> ${bookingData.address || ''}</p>
-    <p><strong>Company Sponsor:</strong> ${bookingData.sponsorCompany || ''}</p>
-    <p><strong>Airline Sponsor:</strong> ${bookingData.sponsorAirline || ''}</p>
-    <p><strong>Appointment:</strong> ${bookingData.bookingDate || ''} at ${bookingData.timeSlot || ''}</p>
+    <p><strong>Name:</strong> ${bookingData.firstName || ''} ${bookingData.middleName || ''} ${bookingData.lastName || ''}</p>
+    <p><strong>Passport:</strong> ${bookingData.passportNumber || 'N/A'}</p>
+    <p><strong>Nationality:</strong> ${bookingData.nationality || 'N/A'}</p>
+    <p><strong>Date of Birth:</strong> ${bookingData.dob || 'N/A'}</p>
+    <p><strong>Address:</strong> ${bookingData.address || 'N/A'}</p>
+    <p><strong>Company Sponsor:</strong> ${bookingData.sponsorCompany || 'N/A'}</p>
+    <p><strong>Airline Sponsor:</strong> ${bookingData.sponsorAirline || 'N/A'}</p>
+    <p><strong>Appointment:</strong> ${bookingData.bookingDate || 'N/A'} at ${bookingData.timeSlot || 'N/A'}</p>
     <p><strong>Status:</strong> ${bookingData.bookingStatus || 'N/A'}</p>
+    <p><strong>Payment Status:</strong> ${bookingData.paymentStatus || 'pending'}</p>
   `;
 
-  // ✅ Show invoice only if booking approved
-  if (bookingData.bookingStatus === "approved") {
+  // Show invoice only if approved
+  if (bookingData.bookingStatus === "approved" && bookingData.invoiceUrl) {
     invoiceContainer.style.display = "block";
-    invoiceLink.href = bookingData.invoiceUrl || "#";
+    invoiceLink.href = bookingData.invoiceUrl;
   } else {
     invoiceContainer.style.display = "none";
   }
 
-  // ✅ Payment form handling
+  // Show IHC code if payment confirmed
+  if (bookingData.paymentStatus === "confirmed" && bookingData.ihcCode) {
+    ihcCodeContainer.style.display = "block";
+    ihcCodeEl.textContent = bookingData.ihcCode;
+
+    // Hide payment form since already paid
+    paymentForm.style.display = "none";
+  } else {
+    ihcCodeContainer.style.display = "none";
+    paymentForm.style.display = "block";
+  }
+
+  // Payment form handling
   paymentForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const method = document.getElementById("paymentMethod").value;
-
+    const method = paymentMethodEl.value;
     if (!method) {
       alert("Please select a payment method.");
       return;
@@ -79,10 +91,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       );
 
-      if (res.ok) {
-        const result = await res.json();
+      const result = await res.json();
 
-        // Update localStorage with new data
+      if (res.ok && result.success) {
         bookingData.paymentMethod = method;
         bookingData.bookingStatus = "pendingApproval";
         localStorage.setItem("booking", JSON.stringify(bookingData));
@@ -90,12 +101,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         alert(
           "Booking Completed. IHC staff will generate your invoice once your booking request has been approved. Please check your email."
         );
-        window.location.href = "step2.html"; // ✅ Redirect back to portal
+        window.location.href = "step2.html";
       } else {
-        const error = await res.json();
-        alert(
-          `Failed to submit payment method: ${error.message || "Unknown error"}`
-        );
+        alert(`Failed to submit payment method: ${result.message || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Payment method error:", err);
