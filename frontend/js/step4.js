@@ -9,7 +9,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const ihcCodeEl = document.getElementById("ihcCode");
 
   const userId = localStorage.getItem("userId");
-  if (!userId) {
+  const token = localStorage.getItem("token");
+
+  if (!userId || !token) {
     alert("Session expired. Please login again.");
     window.location.href = "login.html";
     return;
@@ -18,11 +20,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   let bookingData = null;
 
   try {
-    // Fetch latest bookings
-    const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`);
-    if (!res.ok) throw new Error("Failed to fetch booking details");
+    // ✅ Fetch latest bookings with authorization
+    const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${userId}`, {
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
     const data = await res.json();
+    console.log("Booking fetch response:", data);
+
     if (!data.success || !data.bookings || data.bookings.length === 0) {
       alert("No booking found. Please complete Step 3 first.");
       window.location.href = "step3.html";
@@ -86,12 +96,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         `https://ihc-portal.onrender.com/api/booking/${userId}/paymentMethod`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({ paymentMethod: method, booking: bookingData }),
         }
       );
 
       const result = await res.json();
+      console.log("Payment method submission response:", result);
 
       if (res.ok && result.success) {
         bookingData.paymentMethod = method;
