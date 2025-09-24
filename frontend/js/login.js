@@ -19,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = sanitize(document.getElementById("email").value.trim());
     const password = document.getElementById("password").value;
 
-    // Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !password) {
       showMessage("Please fill in all required fields.");
@@ -34,10 +33,8 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.textContent = "Logging in...";
 
     try {
-      // Clear old session data
       sessionStorage.clear();
 
-      // Login
       const loginRes = await fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,44 +43,66 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!loginRes.ok) {
         const data = await loginRes.json();
+        console.error("Login: Login failed", {
+          endpoint: `${API_BASE}/login`,
+          status: loginRes.status,
+          error: data.error,
+        });
         showMessage(data.error || `Login failed with status ${loginRes.status}`);
         return;
       }
 
       const loginData = await loginRes.json();
       if (!loginData.token || !loginData.userId || !loginData.fullName) {
+        console.error("Login: Invalid response", { response: loginData });
         showMessage("Invalid response from server.");
         return;
       }
 
-      // Fetch email from /api/auth/me
+      console.log("Login: Token received", { token: loginData.token.slice(0, 10) + "..." });
+
+      // Verify token with GET /api/auth/me
       const meRes = await fetch(`${API_BASE}/me`, {
         headers: { Authorization: `Bearer ${loginData.token}`, "Content-Type": "application/json" },
       });
 
       if (!meRes.ok) {
         const data = await meRes.json();
-        showMessage(data.error || `Failed to fetch user data: ${meRes.status}`);
-        return;
+        console.error("Login: Token verification failed", {
+          endpoint: `${API_BASE}/me`,
+          status: meRes.status,
+          error: data.error,
+        });
+        showMessage(data.error || `Failed to verify user: ${meRes.status}`);
+        return; // Stop here; do not store token or redirect
       }
 
       const meData = await meRes.json();
       if (!meData.user || !meData.user.email) {
+        console.error("Login: Invalid user data", { response: meData });
         showMessage("Invalid user data.");
-        return;
+        return; // Stop here
       }
 
+      // Store verified data
       sessionStorage.setItem("token", loginData.token);
       sessionStorage.setItem("userId", loginData.userId);
       sessionStorage.setItem("fullName", sanitize(loginData.fullName));
       sessionStorage.setItem("email", sanitize(meData.user.email));
+
+      console.log("Login: Session storage updated", {
+        userId: loginData.userId,
+        fullName: loginData.fullName,
+        email: meData.user.email,
+        token: loginData.token.slice(0, 10) + "...",
+      });
 
       showMessage("Login successful!", false);
       setTimeout(() => {
         window.location.href = "step2.html";
       }, 1000);
     } catch (err) {
-      console.error("Error logging in user:", {
+      console.error("Login: Error connecting to server:", {
         endpoint: `${API_BASE}/login or /me`,
         error: err.message,
       });
