@@ -25,10 +25,10 @@
       const messageEl = document.getElementById("message");
 
       try {
-        const res = await fetch(`/api/booking/${bookingId}/confirmPayment`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" }
-        });
+        const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${bookingId}/confirmPayment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" }
+    })
 
         const data = await res.json();
         if (data.success) {
