@@ -2,17 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="IHC Registration for NPRA Bahrain">
+  <meta name="keywords" content="IHC, NPRA, Bahrain, registration">
   <title>IHC Registration</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <main>
     <div class="logo-container">
-      <img src="images/npra-logo.png" alt="NPRA Logo" width="600" height="90">
+      <img src="images/npra-logo.png" alt="NPRA Logo" style="max-width: 100%; height: auto;">
     </div>
     
     <div class="progress-container">
-      <a href="step1.html" class="progress-step" data-step="1">Register</a>
+      <a href="step1.html" class="progress-step" data-step="1" aria-current="step">Register</a>
       <a href="step2.html" class="progress-step" data-step="2">Portal</a>
       <a href="step3.html" class="progress-step" data-step="3">Booking</a>
       <a href="step4.html" class="progress-step" data-step="4">Payment</a>
@@ -20,21 +23,24 @@
     </div>
 
     <h2>IHC Registration</h2>
-    <form id="registrationForm">
-      <label>First Name (as in Passport)</label>
+    <form id="registrationForm" action="/api/register" method="POST">
+      <label for="firstName">First Name (as in Passport)</label>
       <input type="text" id="firstName" name="firstName" required>
     
-      <label>Middle Name (as in Passport)</label>
+      <label for="middleName">Middle Name (as in Passport)</label>
       <input type="text" id="middleName" name="middleName">
     
-      <label>Last Name (as in Passport)</label>
+      <label for="lastName">Last Name (as in Passport)</label>
       <input type="text" id="lastName" name="lastName" required>
     
-      <label>Email</label>
+      <label for="email">Email</label>
       <input type="email" id="email" name="email" required>
     
-      <label>Password</label>
-      <input type="password" id="password" name="password" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="Must contain at least one number, one uppercase and lowercase letter, and at least 8 characters" required>
+    
+      <label for="confirmPassword">Confirm Password</label>
+      <input type="password" id="confirmPassword" name="confirmPassword" required>
     
       <button type="submit">Register</button>
     </form>
