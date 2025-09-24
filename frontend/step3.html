@@ -2,79 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Book Your IHC Appointment for NPRA Bahrain">
+  <meta name="keywords" content="IHC, NPRA, Bahrain, booking, appointment">
   <title>IHC Booking</title>
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    fieldset.readonly {
-      background: #f9f9f9;
-      border: 1px solid #ddd;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      border-radius: 6px;
-    }
-    fieldset.readonly legend {
-      font-weight: bold;
-      color: #444;
-    }
-    input[readonly] {
-      background-color: #eee;
-      cursor: not-allowed;
-    }
-  </style>
 </head>
 <body>
   <main>
     <div class="logo-container">
-      <img src="images/npra-logo.png" alt="NPRA Logo" width="600" height="90">
+      <img src="images/npra-logo.png" alt="NPRA Logo" style="max-width: 100%; height: auto;">
     </div>
 
-    <div class="progress-container">
+    <nav class="progress-container" role="navigation">
       <a href="step1.html" class="progress-step" data-step="1">Register</a>
       <a href="step2.html" class="progress-step" data-step="2">Portal</a>
-      <a href="step3.html" class="progress-step active" data-step="3">Booking</a>
+      <a href="step3.html" class="progress-step active" data-step="3" aria-current="step">Booking</a>
       <a href="step4.html" class="progress-step" data-step="4">Payment</a>
       <a href="step5.html" class="progress-step" data-step="5">Confirm</a>
-    </div>
+    </nav>
 
     <h2>Book Your IHC Appointment</h2>
-    <form id="bookingForm">
-
-      <!-- ✅ Locked, prefilled name fields -->
+    <form id="bookingForm" action="/api/booking" method="POST">
       <fieldset class="readonly">
         <legend>Registered Name</legend>
-        <label>First Name (As in Passport)</label>
+        <label for="firstName">First Name (As in Passport)</label>
         <input type="text" id="firstName" name="firstName" readonly required>
 
-        <label>Middle Name</label>
+        <label for="middleName">Middle Name</label>
         <input type="text" id="middleName" name="middleName" readonly>
 
-        <label>Last Name (As in Passport)</label>
+        <label for="lastName">Last Name (As in Passport)</label>
         <input type="text" id="lastName" name="lastName" readonly required>
       </fieldset>
 
-      <!-- ✅ Editable fields start here -->
-      <label>Passport Number</label>
+      <label for="passportNumber">Passport Number</label>
       <input type="text" id="passportNumber" name="passportNumber" required>
 
-      <label>Nationality</label>
+      <label for="nationality">Nationality</label>
       <input type="text" id="nationality" name="nationality" required>
 
-      <label>Date of Birth</label>
+      <label for="dob">Date of Birth</label>
       <input type="date" id="dob" name="dob" required>
 
-      <label>Contact Address</label>
+      <label for="address">Contact Address</label>
       <textarea id="address" name="address" required></textarea>
 
-      <label>Company Sponsor</label>
+      <label for="sponsorCompany">Company Sponsor</label>
       <input type="text" id="sponsorCompany" name="sponsorCompany" required>
 
-      <label>Airline Sponsor</label>
+      <label for="sponsorAirline">Airline Sponsor</label>
       <input type="text" id="sponsorAirline" name="sponsorAirline" required>
 
-      <label>Select Date</label>
+      <label for="bookingDate">Select Date</label>
       <input type="date" id="bookingDate" name="bookingDate" required>
 
-      <label>Select Time Slot</label>
+      <label for="timeSlot">Select Time Slot</label>
       <select id="timeSlot" name="timeSlot" required>
         <option value="">-- Select --</option>
         <option value="09:00-10:00">09:00-10:00</option>
@@ -82,7 +65,7 @@
         <option value="11:00-12:00">11:00-12:00</option>
       </select>
 
-      <button type="submit">Proceed to Payment</button>
+      <button type="submit" aria-label="Proceed to payment">Proceed to Payment</button>
     </form>
   </main>
 
@@ -94,4 +77,3 @@
   <script src="js/step3.js"></script>
 </body>
 </html>
-
