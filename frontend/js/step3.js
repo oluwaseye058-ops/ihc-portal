@@ -46,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const fetchUserData = async () => {
-    // Try sessionStorage first
     if (fullName && populateNameFields(fullName)) {
       console.log("✅ Populated names from sessionStorage:", fullName);
       return;
@@ -66,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const { user } = await res.json();
-      console.log("User data:", user); // Debug: log response
+      console.log("User data:", user);
       if (!user || !user._id || !user.fullName || !user.email) {
         showMessage("Invalid user data.");
         setTimeout(() => (window.location.href = "login.html"), 1000);
@@ -96,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     data.userId = userId;
-    // Note: email is not included in the payload as backend uses user.email
 
     // Sanitize inputs
     data.firstName = sanitize(data.firstName);
@@ -160,16 +158,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const result = await response.json();
       const bookingData = result.booking || data;
-      if (!result.bookingId) {
+      if (!result.booking.bookingId) {
         showMessage("Invalid response from server.");
         return;
       }
 
       sessionStorage.setItem("booking", JSON.stringify(bookingData));
-      sessionStorage.setItem("selectedBookingId", sanitize(result.bookingId));
+      sessionStorage.setItem("selectedBookingId", sanitize(result.booking.bookingId));
       showMessage("Booking submitted successfully! Redirecting to payment...", false);
       setTimeout(() => {
-        window.location.href = `step4.html?bookingId=${result.bookingId}`;
+        window.location.href = `step4.html?bookingId=${result.booking.bookingId}`;
       }, 1000);
     } catch (err) {
       console.error("Error submitting booking:", {

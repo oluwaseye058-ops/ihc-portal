@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IHC Payment / Invoice Request</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/.style.css">
 </head>
 <body>
   <main>
@@ -15,7 +16,7 @@
       <a href="step1.html" class="progress-step" data-step="1">Register</a>
       <a href="step2.html" class="progress-step" data-step="2">Portal</a>
       <a href="step3.html" class="progress-step" data-step="3">Booking</a>
-      <a href="step4.html" class="progress-step" data-step="4">Payment</a>
+      <a href="step4.html" class="progress-step active" data-step="4">Payment</a>
       <a href="step5.html" class="progress-step" data-step="5">Confirm</a>
     </div>
 
@@ -24,8 +25,8 @@
     <div id="bookingSummary"></div>
 
     <form id="paymentForm">
-      <label>Select Payment Method</label>
-      <select id="paymentMethod" required>
+      <label for="paymentMethod">Select Payment Method</label>
+      <select id="paymentMethod" name="paymentMethod" required>
         <option value="">-- Select --</option>
         <option value="bankTransfer">Bank Transfer</option>
         <option value="card" disabled>Card (Not Available)</option>
@@ -33,7 +34,6 @@
         <option value="westernUnion">Western Union</option>
         <option value="moneyGram">MoneyGram</option>
       </select>
-
       <button type="submit">Submit Payment Preference</button>
     </form>
 
@@ -41,6 +41,11 @@
       <h3>Your Invoice</h3>
       <p>Invoice is available after staff approves your booking.</p>
       <a id="invoiceLink" href="#" target="_blank">Download Invoice</a>
+    </div>
+
+    <div id="ihcCodeContainer" style="display:none;">
+      <h3>Your IHC Code</h3>
+      <p id="ihcCode"></p>
     </div>
   </main>
 
@@ -50,7 +55,5 @@
 
   <script src="js/progress.js"></script>
   <script src="js/step4.js"></script>
-
 </body>
 </html>
-
