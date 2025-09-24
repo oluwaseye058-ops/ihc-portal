@@ -21,22 +21,29 @@
   <script>
     document.getElementById("paymentForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-  
+
       const bookingId = document.getElementById("bookingId").value.trim();
       const messageEl = document.getElementById("message");
-  
+
+      if (!bookingId) {
+        messageEl.innerHTML = "<p style='color:red;'>❌ Please enter a Booking ID</p>";
+        return;
+      }
+
       try {
         const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${bookingId}/confirmPayment`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
         });
-  
+
         const data = await res.json();
-  
-        if (data.success) {
-          const ihcCode = data.booking?.ihcCode || "N/A";
+
+        if (data.success && data.booking) {
+          const { booking } = data;
+          const ihcCode = booking.ihcCode || "Not generated";
           messageEl.innerHTML = `
             <p style="color:green;">✅ Payment confirmed successfully!</p>
+            <p><strong>Booking ID:</strong> ${booking.bookingId}</p>
             <p><strong>IHC Code:</strong> ${ihcCode}</p>
           `;
         } else {
@@ -48,6 +55,5 @@
       }
     });
   </script>
-  
 </body>
 </html>

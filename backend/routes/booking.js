@@ -213,14 +213,17 @@ module.exports = function (sendBookingNotification) {
         return res.status(404).json({ success: false, message: "Booking not found" });
       }
 
-      // Generate unique IHC code
-      const ihcCode = "IHC" + Math.floor(100000 + Math.random() * 900000);
-
+      // Update payment
       booking.paymentStatus = "confirmed";
-      booking.ihcCode = ihcCode;
+
+      // Generate unique IHC code if not already
+      if (!booking.ihcCode) {
+        booking.ihcCode = "IHC" + Math.floor(100000 + Math.random() * 900000);
+      }
+
       await booking.save();
 
-      console.log(`💰 Payment confirmed for ${bookingId}, IHC Code issued: ${ihcCode}`);
+      console.log(`💰 Payment confirmed for ${bookingId}, IHC Code issued: ${booking.ihcCode}`);
 
       // Notify candidate
       if (booking.email) {
@@ -231,7 +234,7 @@ module.exports = function (sendBookingNotification) {
           `
             <p>Dear ${booking.firstName},</p>
             <p>Your payment for booking <strong>${booking.bookingId}</strong> has been confirmed.</p>
-            <p>Your unique IHC Code is: <strong>${ihcCode}</strong></p>
+            <p>Your unique IHC Code is: <strong>${booking.ihcCode}</strong></p>
             <p>You may download your confirmation letter from your portal.</p>
             <p>
               <a href="${frontendUrl}/step5.html?bookingId=${booking.bookingId}"
@@ -245,6 +248,7 @@ module.exports = function (sendBookingNotification) {
         );
       }
 
+      // ✅ Return updated booking with IHC code
       res.json({ success: true, booking });
     } catch (err) {
       console.error("❌ Error confirming payment:", err);
