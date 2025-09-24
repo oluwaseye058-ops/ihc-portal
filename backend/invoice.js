@@ -14,7 +14,6 @@ module.exports = function (sendBookingNotification) {
       const { bookingId } = req.params;
       const { invoiceUrl } = req.body;
 
-      // Populate userId to access candidate email
       const booking = await Booking.findOne({ bookingId }).populate("userId");
       if (!booking) return res.status(404).json({ error: "Booking not found" });
 
@@ -26,20 +25,21 @@ module.exports = function (sendBookingNotification) {
       if (booking.userId && booking.userId.email) {
         try {
           const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal.onrender.com";
-
           await sendBookingNotification(
             booking.userId.email,
-            "Booking Approved – IHC",
-            `<p>Dear ${booking.firstName} ${booking.lastName},</p>
-             <p>Your booking has been <strong>approved</strong> by IHC staff.</p>
-             <p>You may now download your invoice from your portal:</p>
-             <p>
-               <a href="${frontendUrl}/invoice.html?bookingId=${booking.bookingId}" 
-                  style="padding:10px 20px;background:#007bff;color:#fff;text-decoration:none;">
-                 View Invoice
-               </a>
-             </p>
-             <p>Thank you,<br>IHC Team</p>`
+            "IHC Booking Approved – Invoice Available",
+            `
+              <p>Dear ${booking.firstName} ${booking.lastName},</p>
+              <p>Your booking has been <strong>approved</strong> by IHC staff.</p>
+              <p>You may now download your invoice:</p>
+              <p>
+                <a href="${frontendUrl}/invoice.html?bookingId=${booking.bookingId}" 
+                   style="padding:10px 20px;background:#007bff;color:#fff;text-decoration:none;border-radius:4px;">
+                   View Invoice
+                </a>
+              </p>
+              <p>Thank you,<br>IHC Team</p>
+            `
           );
           console.log(`📧 Approval email sent to ${booking.userId.email}`);
         } catch (emailErr) {
