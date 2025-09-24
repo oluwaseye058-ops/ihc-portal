@@ -1,25 +1,77 @@
-// backend/routes/booking.js
+
 const express = require("express");
 const User = require("../models/user");
-const Booking = require("../models/booking"); // MongoDB model
+const Booking = require("../models/booking");
+const crypto = require("crypto");
 
 module.exports = function (sendBookingNotification) {
   const router = express.Router();
 
+  // Middleware to verify JWT
+  const authMiddleware = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, message: "No token provided" });
+    }
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded; // { id: user._id }
+      next();
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
+  };
+
+  // Middleware for staff-only routes
+  const staffMiddleware = (req, res, next) => {
+    // Assuming User model has a role field (e.g., 'staff' or 'admin')
+    User.findById(req.user.id)
+      .then(user => {
+        if (!user || user.role !== "staff") {
+          return res.status(403).json({ success: false, message: "Staff access required" });
+        }
+        next();
+      })
+      .catch(err => {
+        console.error("❌ Staff auth error:", err.message);
+        res.status(500).json({ success: false, message: "Server error" });
+      });
+  };
+
   // POST /api/booking/:userId → create new booking
-  router.post("/:userId", async (req, res) => {
+  router.post("/:userId", authMiddleware, async (req, res) => {
     const { userId } = req.params;
     const bookingData = req.body;
 
-    if (!bookingData.firstName || !bookingData.lastName || !bookingData.bookingDate || !bookingData.timeSlot) {
-      return res.status(400).json({ success: false, message: "Missing required booking fields" });
+    // Validate required fields
+    const requiredFields = [
+      "firstName",
+      "lastName",
+      "passportNumber",
+      "nationality",
+      "dob",
+      "address",
+      "sponsorCompany",
+      "sponsorAirline",
+      "bookingDate",
+      "timeSlot",
+    ];
+    for (const field of requiredFields) {
+      if (!bookingData[field]) {
+        return res.status(400).json({ success: false, message: `Missing required field: ${field}` });
+      }
     }
 
     try {
       const user = await User.findById(userId);
       if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-      const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
+      if (req.user.id !== userId) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+      }
+
+      const bookingId = "BK" + crypto.randomBytes(4).toString("hex").toUpperCase();
       const booking = new Booking({
         ...bookingData,
         userId,
@@ -33,8 +85,11 @@ module.exports = function (sendBookingNotification) {
 
       // Notify staff
       try {
+        if (!process.env.STAFF_EMAIL) {
+          console.warn("⚠️ STAFF_EMAIL not set");
+        }
         await sendBookingNotification(
-          process.env.STAFF_EMAIL,
+          process.env.STAFF_EMAIL || "staff@ihc-portal.com",
           `New IHC Booking: ${booking.bookingId}`,
           `<p>A new IHC booking has been submitted:</p>
            <ul>
@@ -57,7 +112,7 @@ module.exports = function (sendBookingNotification) {
   });
 
   // POST /api/booking/:userId/paymentMethod → save payment method
-  router.post("/:userId/paymentMethod", async (req, res) => {
+  router.post("/:userId/paymentMethod", authMiddleware, async (req, res) => {
     const { userId } = req.params;
     const { paymentMethod, booking } = req.body;
 
@@ -69,6 +124,10 @@ module.exports = function (sendBookingNotification) {
       const userBooking = await Booking.findOne({ userId, bookingId: booking.bookingId });
       if (!userBooking) return res.status(404).json({ success: false, message: "Booking not found" });
 
+      if (req.user.id !== userId) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+      }
+
       userBooking.paymentMethod = paymentMethod;
       userBooking.bookingStatus = "pendingApproval";
       await userBooking.save();
@@ -76,21 +135,32 @@ module.exports = function (sendBookingNotification) {
       console.log("💳 Payment method updated in DB:", userBooking);
 
       // Notify staff
-      await sendBookingNotification(
-        process.env.STAFF_EMAIL,
-        `Payment Method Submitted: ${userBooking.bookingId}`,
-        `<p>A candidate has submitted a booking with payment details:</p>
-         <ul>
-           <li><strong>Name:</strong> ${userBooking.firstName} ${userBooking.middleName || ""} ${userBooking.lastName}</li>
-           <li><strong>Email:</strong> ${userBooking.email}</li>
-           <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
-           <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
-         </ul>
-         <p>Please review and approve this booking in the portal to generate invoice.</p>`
-      );
+      try {
+        if (!process.env.STAFF_EMAIL) {
+          console.warn("⚠️ STAFF_EMAIL not set");
+        }
+        await sendBookingNotification(
+          process.env.STAFF_EMAIL || "staff@ihc-portal.com",
+          `Payment Method Submitted: ${userBooking.bookingId}`,
+          `<p>A candidate has submitted a booking with payment details:</p>
+           <ul>
+             <li><strong>Name:</strong> ${userBooking.firstName} ${userBooking.middleName || ""} ${userBooking.lastName}</li>
+             <li><strong>Email:</strong> ${userBooking.email}</li>
+             <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
+             <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
+           </ul>
+           <p>Please review and approve this booking in the portal to generate invoice.</p>`
+        );
+        console.log("📧 Staff notified via email (payment stage)");
+      } catch (err) {
+        console.error("❌ Error sending staff email:", err.message);
+      }
 
       // Notify candidate
-      if (userBooking.email) {
+      try {
+        if (!process.env.FRONTEND_URL) {
+          console.warn("⚠️ FRONTEND_URL not set");
+        }
         const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
         await sendBookingNotification(
           userBooking.email,
@@ -110,6 +180,8 @@ module.exports = function (sendBookingNotification) {
            <p>Thank you,<br>IHC Team</p>`
         );
         console.log("📧 Candidate notified (payment stage)");
+      } catch (err) {
+        console.error("❌ Error sending candidate email:", err.message);
       }
 
       res.json({ success: true, booking: userBooking });
@@ -120,7 +192,7 @@ module.exports = function (sendBookingNotification) {
   });
 
   // PUT /api/booking/:bookingId/confirmPayment → mark paid + issue IHC code
-  router.put("/:bookingId/confirmPayment", async (req, res) => {
+  router.put("/:bookingId/confirmPayment", authMiddleware, staffMiddleware, async (req, res) => {
     try {
       const { bookingId } = req.params;
 
@@ -132,9 +204,9 @@ module.exports = function (sendBookingNotification) {
       // Update payment status
       booking.paymentStatus = "confirmed";
 
-      // ✅ Only generate IHC code if it doesn't exist
+      // Only generate IHC code if it doesn't exist
       if (!booking.ihcCode || booking.ihcCode.trim() === "") {
-        booking.ihcCode = "IHC" + Math.floor(100000 + Math.random() * 900000);
+        booking.ihcCode = "IHC" + crypto.randomBytes(4).toString("hex").toUpperCase();
         console.log(`💰 New IHC Code generated: ${booking.ihcCode}`);
       } else {
         console.log(`ℹ️ Reusing existing IHC Code: ${booking.ihcCode}`);
@@ -142,8 +214,11 @@ module.exports = function (sendBookingNotification) {
 
       await booking.save();
 
-      // Always send email to candidate
-      if (booking.email) {
+      // Notify candidate
+      try {
+        if (!process.env.FRONTEND_URL) {
+          console.warn("⚠️ FRONTEND_URL not set");
+        }
         const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
         await sendBookingNotification(
           booking.email,
@@ -158,13 +233,30 @@ module.exports = function (sendBookingNotification) {
            <p>Thank you,<br>IHC Team</p>`
         );
         console.log(`📧 Payment confirmation email sent to ${booking.email}`);
+      } catch (err) {
+        console.error("❌ Error sending candidate email:", err.message);
       }
 
       res.json({ success: true, booking });
-
     } catch (err) {
-      console.error("❌ Error confirming payment:", err);
+      console.error("❌ Error confirming payment:", err.message);
       res.status(500).json({ success: false, message: "Server error confirming payment" });
+    }
+  });
+
+  // GET /api/booking/:userId → fetch user bookings
+  router.get("/:userId", authMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      if (req.user.id !== userId) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+      }
+
+      const bookings = await Booking.find({ userId }).select("-__v");
+      res.json({ success: true, bookings });
+    } catch (err) {
+      console.error("❌ Fetch bookings error:", err.message);
+      res.status(500).json({ success: false, message: "Server error fetching bookings" });
     }
   });
 

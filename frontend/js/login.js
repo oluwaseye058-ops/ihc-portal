@@ -34,27 +34,46 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.textContent = "Logging in...";
 
     try {
-      const res = await fetch(`${API_BASE}/login`, {
+      // Login
+      const loginRes = await fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        showMessage(data.error || `Login failed with status ${res.status}`);
+      if (!loginRes.ok) {
+        const data = await loginRes.json();
+        showMessage(data.error || `Login failed with status ${loginRes.status}`);
         return;
       }
 
-      const data = await res.json();
-      if (!data.token || !data.userId || !data.fullName) {
+      const loginData = await loginRes.json();
+      if (!loginData.token || !loginData.userId || !loginData.fullName) {
         showMessage("Invalid response from server.");
         return;
       }
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userId", data.userId);
-      localStorage.setItem("fullName", data.fullName);
+      // Fetch email from /api/auth/me
+      const meRes = await fetch(`${API_BASE}/me`, {
+        headers: { Authorization: `Bearer ${loginData.token}`, "Content-Type": "application/json" },
+      });
+
+      if (!meRes.ok) {
+        const data = await meRes.json();
+        showMessage(data.error || `Failed to fetch user data: ${meRes.status}`);
+        return;
+      }
+
+      const meData = await meRes.json();
+      if (!meData.user || !meData.user.email) {
+        showMessage("Invalid user data.");
+        return;
+      }
+
+      sessionStorage.setItem("token", loginData.token);
+      sessionStorage.setItem("userId", loginData.userId);
+      sessionStorage.setItem("fullName", sanitize(loginData.fullName));
+      sessionStorage.setItem("email", sanitize(meData.user.email));
 
       showMessage("Login successful!", false);
       setTimeout(() => {
@@ -62,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 1000);
     } catch (err) {
       console.error("Error logging in user:", {
-        endpoint: `${API_BASE}/login`,
+        endpoint: `${API_BASE}/login or /me`,
         error: err.message,
       });
       showMessage("Error connecting to server.");

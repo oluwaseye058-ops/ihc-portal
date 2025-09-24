@@ -1,10 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("registrationForm");
   const submitButton = form.querySelector("button[type='submit']");
+  const API_BASE = "https://ihc-portal.onrender.com";
 
   const showMessage = (message, isError = true) => {
     const msgDiv = document.createElement("div");
-    msgDiv.style = `position: fixed; top: 10px; right: 10px; padding: 10px; color: white; background: ${isError ? "red" : "green"}; border-radius: 5px; z-index: 1000;`;
+    msgDiv.className = `message ${isError ? "error" : "success"}`;
     msgDiv.textContent = message;
     document.body.appendChild(msgDiv);
     setTimeout(() => msgDiv.remove(), 3000);
@@ -50,34 +51,50 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.textContent = "Registering...";
 
     try {
-      const response = await fetch("https://ihc-portal.onrender.com/api/register", {
+      // Register
+      const regResponse = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, middleName, lastName, email, password }),
+        body: JSON.stringify({ fullName: [firstName, middleName, lastName].filter(Boolean).join(" "), email, password }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        showMessage(data.error || `Registration failed with status ${response.status}`);
+      if (!regResponse.ok) {
+        const data = await regResponse.json();
+        showMessage(data.error || `Registration failed with status ${regResponse.status}`);
         return;
       }
 
-      const data = await response.json();
-      if (!data.token || !data.userId) {
+      // Auto-login after registration
+      const loginResponse = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!loginResponse.ok) {
+        const data = await loginResponse.json();
+        showMessage(data.error || `Login failed with status ${loginResponse.status}`);
+        return;
+      }
+
+      const loginData = await loginResponse.json();
+      if (!loginData.token || !loginData.userId || !loginData.fullName) {
         showMessage("Invalid response from server.");
         return;
       }
 
-      localStorage.setItem("token", data.token);
-      sessionStorage.setItem("userId", data.userId);
+      sessionStorage.setItem("token", loginData.token);
+      sessionStorage.setItem("userId", loginData.userId);
+      sessionStorage.setItem("fullName", sanitize(loginData.fullName));
+      sessionStorage.setItem("email", sanitize(email));
 
-      showMessage(data.existing ? "You are already registered. Redirecting to your portal..." : "Registration successful!", false);
+      showMessage("Registration successful!", false);
       setTimeout(() => {
         window.location.href = "step2.html";
       }, 1000);
     } catch (err) {
       console.error("Error registering user:", {
-        endpoint: "https://ihc-portal.onrender.com/api/register",
+        endpoint: `${API_BASE}/api/auth/register or /login`,
         error: err.message,
       });
       showMessage("Error connecting to server.");

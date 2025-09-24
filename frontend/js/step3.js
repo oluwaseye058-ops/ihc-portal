@@ -14,10 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const sanitize = (input) => input.replace(/[<>"'%;()&]/g, "");
 
-  const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  const token = sessionStorage.getItem("token");
+  const userId = sessionStorage.getItem("userId");
+  const fullName = sessionStorage.getItem("fullName");
+  const email = sessionStorage.getItem("email");
 
-  if (!token || !userId) {
+  if (!token || !userId || !email) {
     showMessage("Session expired. Please login again.");
     setTimeout(() => (window.location.href = "login.html"), 1000);
     return;
@@ -27,7 +29,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const today = new Date().toISOString().split("T")[0];
   dateInput.setAttribute("min", today);
 
+  const populateNameFields = (fullName) => {
+    if (!fullName) return false;
+    const nameParts = fullName.trim().split(" ");
+    document.getElementById("firstName").value = sanitize(nameParts[0] || "");
+    document.getElementById("middleName").value = sanitize(nameParts.length === 3 ? nameParts[1] : "");
+    document.getElementById("lastName").value = sanitize(nameParts[nameParts.length - 1] || "");
+    ["firstName", "middleName", "lastName"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.readOnly = true;
+        el.classList.add("readonly");
+      }
+    });
+    return true;
+  };
+
   const fetchUserData = async () => {
+    // Try sessionStorage first
+    if (fullName && populateNameFields(fullName)) {
+      console.log("✅ Populated names from sessionStorage:", fullName);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -35,33 +59,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) {
         const data = await res.json();
+        console.error("API error:", { endpoint: `${API_BASE}/api/auth/me`, status: res.status, error: data });
         showMessage(data.error || `Session expired: ${res.status}`);
         setTimeout(() => (window.location.href = "login.html"), 1000);
         return;
       }
 
       const { user } = await res.json();
-      if (!user || !user._id) {
+      console.log("User data:", user); // Debug: log response
+      if (!user || !user._id || !user.fullName || !user.email) {
         showMessage("Invalid user data.");
+        setTimeout(() => (window.location.href = "login.html"), 1000);
         return;
       }
 
-      document.getElementById("firstName").value = sanitize(user.firstName) || "";
-      document.getElementById("middleName").value = sanitize(user.middleName) || "";
-      document.getElementById("lastName").value = sanitize(user.lastName) || "";
-      ["firstName", "middleName", "lastName"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.readOnly = true;
-          el.classList.add("readonly");
-        }
-      });
+      if (populateNameFields(user.fullName)) {
+        sessionStorage.setItem("fullName", sanitize(user.fullName));
+        sessionStorage.setItem("email", sanitize(user.email));
+        console.log("✅ Populated names from API:", user.fullName);
+      } else {
+        showMessage("Unable to load user name. Please login again.");
+        setTimeout(() => (window.location.href = "login.html"), 1000);
+      }
     } catch (err) {
       console.error("Error fetching user data:", {
         endpoint: `${API_BASE}/api/auth/me`,
         error: err.message,
       });
-      showMessage("Error loading user data.");
+      showMessage("Error loading user data. Please try again.");
     }
   };
 
@@ -71,8 +96,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     data.userId = userId;
+    // Note: email is not included in the payload as backend uses user.email
 
     // Sanitize inputs
+    data.firstName = sanitize(data.firstName);
+    data.middleName = sanitize(data.middleName || "");
+    data.lastName = sanitize(data.lastName);
     data.passportNumber = sanitize(data.passportNumber);
     data.nationality = sanitize(data.nationality);
     data.address = sanitize(data.address);
@@ -114,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.textContent = "Submitting...";
 
     try {
-      const response = await fetch(`${API_BASE}/api/booking`, {
+      const response = await fetch(`${API_BASE}/api/booking/${userId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -136,15 +165,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      localStorage.setItem("booking", JSON.stringify(bookingData));
-      localStorage.setItem("selectedBookingId", sanitize(result.bookingId));
+      sessionStorage.setItem("booking", JSON.stringify(bookingData));
+      sessionStorage.setItem("selectedBookingId", sanitize(result.bookingId));
       showMessage("Booking submitted successfully! Redirecting to payment...", false);
       setTimeout(() => {
         window.location.href = `step4.html?bookingId=${result.bookingId}`;
       }, 1000);
     } catch (err) {
       console.error("Error submitting booking:", {
-        endpoint: `${API_BASE}/api/booking`,
+        endpoint: `${API_BASE}/api/booking/${userId}`,
         error: err.message,
       });
       showMessage("Failed to submit booking. Please try again later.");

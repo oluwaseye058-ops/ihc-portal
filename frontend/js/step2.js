@@ -18,8 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const sanitize = (input) => input.replace(/[<>"'%;()&]/g, "");
 
-  const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  const token = sessionStorage.getItem("token");
+  const userId = sessionStorage.getItem("userId");
 
   if (!token || !userId) {
     showMessage("Please login first.");
@@ -28,18 +28,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("fullName");
+    sessionStorage.removeItem("token");
     sessionStorage.removeItem("userId");
+    sessionStorage.removeItem("fullName");
+    sessionStorage.removeItem("email");
     showMessage("Logged out successfully!", false);
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
 
   const viewInvoice = (booking) => {
     if (!booking) return;
-    localStorage.setItem("selectedBookingId", sanitize(booking.bookingId));
-    localStorage.setItem("selectedBooking", JSON.stringify(booking));
+    sessionStorage.setItem("selectedBookingId", sanitize(booking.bookingId));
+    sessionStorage.setItem("selectedBooking", JSON.stringify(booking));
     window.location.href = "invoice.html";
   };
 
@@ -73,13 +73,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const { user } = await statusRes.json();
+      console.log("User data:", user); // Debug: log response
       if (!user || !user._id) {
         showMessage("Invalid user data.");
         return;
       }
 
       welcomeEl.textContent = `Welcome ${sanitize(user.fullName) || "Registered User"}`;
-      localStorage.setItem("userId", sanitize(user._id));
+      sessionStorage.setItem("userId", sanitize(user._id));
+      sessionStorage.setItem("fullName", sanitize(user.fullName));
+      sessionStorage.setItem("email", sanitize(user.email));
       startBtn.disabled = false;
     } catch (err) {
       console.error("Error fetching user data:", {
@@ -92,6 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const fetchBookings = async () => {
+    // Note: GET /api/booking/:userId is not defined in routes/booking.js
+    // Implemented in booking.js for compatibility; confirm if another endpoint exists
     try {
       const bookingRes = await fetch(`${API_BASE}/api/booking/${userId}`, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -99,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!bookingRes.ok) {
         const data = await bookingRes.json();
-        showMessage(data.error || `Failed to fetch bookings: ${bookingRes.status}`);
+        showMessage(data.message || `Failed to fetch bookings: ${bookingRes.status}`);
         return;
       }
 
