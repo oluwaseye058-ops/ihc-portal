@@ -12,16 +12,17 @@ module.exports = function (sendBookingNotification) {
   router.put("/:bookingId/approve", async (req, res) => {
     try {
       const { bookingId } = req.params;
-      const { invoiceUrl } = req.body;
+      const { invoiceUrl } = req.body; // staff provides this URL
 
       const booking = await Booking.findOne({ bookingId }).populate("userId");
       if (!booking) return res.status(404).json({ error: "Booking not found" });
 
+      // ✅ Update booking
       booking.bookingStatus = "approved";
       booking.invoiceUrl = invoiceUrl;
       await booking.save();
 
-      // ✅ Send email to candidate
+      // ✅ Send email to candidate with direct link to invoice
       if (booking.userId && booking.userId.email) {
         try {
           const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal.onrender.com";
