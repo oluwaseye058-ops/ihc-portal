@@ -21,31 +21,33 @@
   <script>
     document.getElementById("paymentForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+  
       const bookingId = document.getElementById("bookingId").value.trim();
       const messageEl = document.getElementById("message");
-
+  
       try {
         const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${bookingId}/confirmPayment`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" }
-    })
-
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+        });
+  
         const data = await res.json();
+  
         if (data.success) {
+          const ihcCode = data.booking?.ihcCode || "N/A";
           messageEl.innerHTML = `
-            <p style="color:green;">
-              ✅ Payment confirmed for booking <strong>${bookingId}</strong>.<br>
-              IHC Code: <strong>${data.booking.ihcCode}</strong>
-            </p>
+            <p style="color:green;">✅ Payment confirmed successfully!</p>
+            <p><strong>IHC Code:</strong> ${ihcCode}</p>
           `;
         } else {
           messageEl.innerHTML = `<p style="color:red;">❌ ${data.message || "Failed to confirm payment"}</p>`;
         }
       } catch (err) {
-        console.error("❌ Error confirming payment:", err);
-        messageEl.innerHTML = `<p style="color:red;">Server error</p>`;
+        console.error(err);
+        messageEl.innerHTML = "<p style='color:red;'>❌ Server error</p>";
       }
     });
   </script>
+  
 </body>
 </html>
