@@ -11,23 +11,14 @@ module.exports = function (sendBookingNotification) {
     const { userId } = req.params;
     const bookingData = req.body;
 
-    if (
-      !bookingData.firstName ||
-      !bookingData.lastName ||
-      !bookingData.bookingDate ||
-      !bookingData.timeSlot
-    ) {
+    if (!bookingData.firstName || !bookingData.lastName || !bookingData.bookingDate || !bookingData.timeSlot) {
       return res.status(400).json({ success: false, message: "Missing required booking fields" });
     }
 
     try {
-      // ✅ Fetch user from DB
       const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
+      if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-      // ✅ Create booking doc
       const bookingId = "BK" + Math.floor(1000 + Math.random() * 9000);
       const booking = new Booking({
         ...bookingData,
@@ -38,9 +29,9 @@ module.exports = function (sendBookingNotification) {
       });
 
       await booking.save();
-      console.log("📅 New booking saved in DB:", booking);
+      console.log("📅 New booking saved:", booking);
 
-      // ✅ Notify staff
+      // Notify staff
       try {
         await sendBookingNotification(
           process.env.STAFF_EMAIL,
@@ -50,15 +41,7 @@ module.exports = function (sendBookingNotification) {
             <ul>
               <li><strong>Name:</strong> ${booking.firstName} ${booking.middleName || ""} ${booking.lastName}</li>
               <li><strong>Email:</strong> ${booking.email}</li>
-              <li><strong>Passport:</strong> ${booking.passportNumber}</li>
-              <li><strong>Nationality:</strong> ${booking.nationality}</li>
-              <li><strong>DOB:</strong> ${booking.dob}</li>
-              <li><strong>Address:</strong> ${booking.address}</li>
-              <li><strong>Sponsor Company:</strong> ${booking.sponsorCompany}</li>
-              <li><strong>Sponsor Airline:</strong> ${booking.sponsorAirline}</li>
-              <li><strong>Appointment:</strong> ${booking.bookingDate} at ${booking.timeSlot}</li>
               <li><strong>Booking ID:</strong> ${booking.bookingId}</li>
-              <li><strong>User ID:</strong> ${userId}</li>
             </ul>
             <p>Please review and approve the booking in the portal.</p>
           `
@@ -75,7 +58,7 @@ module.exports = function (sendBookingNotification) {
     }
   });
 
-  // ✅ Save payment method + send emails
+  // POST /api/booking/:userId/paymentMethod → save payment method
   router.post("/:userId/paymentMethod", async (req, res) => {
     const { userId } = req.params;
     const { paymentMethod, booking } = req.body;
@@ -86,9 +69,7 @@ module.exports = function (sendBookingNotification) {
 
     try {
       const userBooking = await Booking.findOne({ userId, bookingId: booking.bookingId });
-      if (!userBooking) {
-        return res.status(404).json({ success: false, message: "Booking not found" });
-      }
+      if (!userBooking) return res.status(404).json({ success: false, message: "Booking not found" });
 
       userBooking.paymentMethod = paymentMethod;
       userBooking.bookingStatus = "pendingApproval";
@@ -96,7 +77,7 @@ module.exports = function (sendBookingNotification) {
 
       console.log("💳 Payment method updated in DB:", userBooking);
 
-      // ✅ Notify staff
+      // Notify staff
       await sendBookingNotification(
         process.env.STAFF_EMAIL,
         `Payment Method Submitted: ${userBooking.bookingId}`,
@@ -105,13 +86,6 @@ module.exports = function (sendBookingNotification) {
           <ul>
             <li><strong>Name:</strong> ${userBooking.firstName} ${userBooking.middleName || ""} ${userBooking.lastName}</li>
             <li><strong>Email:</strong> ${userBooking.email}</li>
-            <li><strong>Passport:</strong> ${userBooking.passportNumber}</li>
-            <li><strong>Nationality:</strong> ${userBooking.nationality}</li>
-            <li><strong>DOB:</strong> ${userBooking.dob}</li>
-            <li><strong>Address:</strong> ${userBooking.address}</li>
-            <li><strong>Sponsor Company:</strong> ${userBooking.sponsorCompany}</li>
-            <li><strong>Sponsor Airline:</strong> ${userBooking.sponsorAirline}</li>
-            <li><strong>Appointment:</strong> ${userBooking.bookingDate} at ${userBooking.timeSlot}</li>
             <li><strong>Booking ID:</strong> ${userBooking.bookingId}</li>
             <li><strong>Payment Method:</strong> ${userBooking.paymentMethod}</li>
           </ul>
@@ -119,7 +93,7 @@ module.exports = function (sendBookingNotification) {
         `
       );
 
-      // ✅ Notify candidate
+      // Notify candidate
       if (userBooking.email) {
         const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
         await sendBookingNotification(
@@ -155,11 +129,11 @@ module.exports = function (sendBookingNotification) {
     }
   });
 
-  // ✅ Approve booking + generate invoice
+  // PUT /api/booking/:bookingId/approve → approve booking + attach invoice
   router.put("/:bookingId/approve", async (req, res) => {
     try {
       const { bookingId } = req.params;
-      const { invoiceUrl } = req.body; // URL of the invoice PDF or file
+      const { invoiceUrl } = req.body;
 
       const booking = await Booking.findOne({ bookingId });
       if (!booking) return res.status(404).json({ error: "Booking not found" });
@@ -170,7 +144,7 @@ module.exports = function (sendBookingNotification) {
 
       console.log("✅ Booking approved:", booking);
 
-      // ✅ Notify candidate
+      // Notify candidate with link containing bookingId
       if (booking.email) {
         const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
         await sendBookingNotification(
@@ -179,9 +153,9 @@ module.exports = function (sendBookingNotification) {
           `
             <p>Dear ${booking.firstName},</p>
             <p>Your booking <strong>${booking.bookingId}</strong> has been approved.</p>
-            <p>You may now download your invoice from the portal.</p>
+            <p>You may now view and download your invoice:</p>
             <p>
-              <a href="${frontendUrl}/invoice.html"
+              <a href="${frontendUrl}/invoice.html?bookingId=${booking.bookingId}"
                  style="display:inline-block;padding:12px 24px;background-color:#28a745;color:#ffffff;
                         text-decoration:none;border-radius:6px;font-weight:bold;">
                 View Invoice
@@ -197,6 +171,19 @@ module.exports = function (sendBookingNotification) {
     } catch (err) {
       console.error("❌ Approve booking error:", err);
       res.status(500).json({ error: "Server error updating booking" });
+    }
+  });
+
+  // GET /api/booking/id/:bookingId → fetch single booking by bookingId
+  router.get("/id/:bookingId", async (req, res) => {
+    try {
+      const { bookingId } = req.params;
+      const booking = await Booking.findOne({ bookingId });
+      if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+      res.json({ success: true, booking });
+    } catch (err) {
+      console.error("❌ Error fetching booking by ID:", err);
+      res.status(500).json({ success: false, message: "Server error fetching booking" });
     }
   });
 
