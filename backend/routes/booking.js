@@ -129,7 +129,7 @@ module.exports = function (sendBookingNotification) {
     }
   });
 
-  // PUT /api/booking/:bookingId/confirmPayment → mark paid + issue IHC code
+// PUT /api/booking/:bookingId/confirmPayment → mark paid + issue IHC code
 router.put("/:bookingId/confirmPayment", async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -139,11 +139,11 @@ router.put("/:bookingId/confirmPayment", async (req, res) => {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-    // ✅ Update payment status
+    // Update payment status
     booking.paymentStatus = "confirmed";
 
-    // ✅ Generate only once, then reuse
-    if (!booking.ihcCode) {
+    // ✅ Only generate IHC code if it doesn't exist
+    if (!booking.ihcCode || booking.ihcCode.trim() === "") {
       booking.ihcCode = "IHC" + Math.floor(100000 + Math.random() * 900000);
       console.log(`💰 New IHC Code generated: ${booking.ihcCode}`);
     } else {
@@ -152,7 +152,7 @@ router.put("/:bookingId/confirmPayment", async (req, res) => {
 
     await booking.save();
 
-    // ✅ Always send email (even if code existed before)
+    // Always send email to candidate
     if (booking.email) {
       const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
       await sendBookingNotification(
@@ -176,7 +176,6 @@ router.put("/:bookingId/confirmPayment", async (req, res) => {
       console.log(`📧 Payment confirmation email sent to ${booking.email}`);
     }
 
-    // ✅ Always return the same IHC code
     res.json({ success: true, booking });
 
   } catch (err) {
@@ -184,6 +183,7 @@ router.put("/:bookingId/confirmPayment", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error confirming payment" });
   }
 });
+
 
 
 
