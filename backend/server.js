@@ -163,7 +163,7 @@ app.post("/api/payment/:userId", async (req, res) => {
 });
 
 // 👉 Import booking routes
-const bookingRoutes = require("./routes/booking");
+const bookingRoutes = require("./routes/booking") ;
 app.use("/api/booking", bookingRoutes(sendBookingNotification));
 
 // 👉 Test route
