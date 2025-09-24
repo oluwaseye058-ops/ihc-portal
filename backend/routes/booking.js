@@ -178,83 +178,59 @@ module.exports = function (sendBookingNotification) {
     }
   });
 
-  // GET /api/booking/id/:bookingId → fetch single booking by bookingId
-  router.get("/id/:bookingId", async (req, res) => {
-    try {
-      const { bookingId } = req.params;
-      const booking = await Booking.findOne({ bookingId });
-      if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
-      res.json({ success: true, booking });
-    } catch (err) {
-      console.error("❌ Error fetching booking by ID:", err);
-      res.status(500).json({ success: false, message: "Server error fetching booking" });
+ // PUT /api/booking/:bookingId/confirmPayment → mark paid + issue IHC code
+router.put("/:bookingId/confirmPayment", async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findOne({ bookingId });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
     }
-  });
 
-  // GET /api/booking/:userId → fetch all bookings for a user
-  router.get("/:userId", async (req, res) => {
-    const { userId } = req.params;
-    try {
-      const userBookings = await Booking.find({ userId });
-      res.json({ success: true, bookings: userBookings });
-    } catch (err) {
-      console.error("❌ Error fetching bookings:", err.message);
-      res.status(500).json({ success: false, message: "Server error fetching bookings" });
+    // Update payment
+    booking.paymentStatus = "confirmed";
+
+    // Generate unique IHC code if not already issued
+    if (!booking.ihcCode) {
+      booking.ihcCode = "IHC" + Math.floor(100000 + Math.random() * 900000);
     }
-  });
 
-  // PUT /api/booking/:bookingId/confirmPayment → mark paid + issue IHC code
-  router.put("/:bookingId/confirmPayment", async (req, res) => {
-    try {
-      const { bookingId } = req.params;
+    await booking.save();
 
-      const booking = await Booking.findOne({ bookingId });
-      if (!booking) {
-        return res.status(404).json({ success: false, message: "Booking not found" });
-      }
+    console.log(`💰 Payment confirmed for ${bookingId}, IHC Code issued: ${booking.ihcCode}`);
 
-      // Update payment
-      booking.paymentStatus = "confirmed";
-
-      // Generate unique IHC code if not already
-      if (!booking.ihcCode) {
-        booking.ihcCode = "IHC" + Math.floor(100000 + Math.random() * 900000);
-      }
-
-      await booking.save();
-
-      console.log(`💰 Payment confirmed for ${bookingId}, IHC Code issued: ${booking.ihcCode}`);
-
-      // Notify candidate
-      if (booking.email) {
-        const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
-        await sendBookingNotification(
-          booking.email,
-          "IHC Payment Confirmed – Your IHC Code",
-          `
-            <p>Dear ${booking.firstName},</p>
-            <p>Your payment for booking <strong>${booking.bookingId}</strong> has been confirmed.</p>
-            <p>Your unique IHC Code is: <strong>${booking.ihcCode}</strong></p>
-            <p>You may download your confirmation letter from your portal.</p>
-            <p>
-              <a href="${frontendUrl}/step5.html?bookingId=${booking.bookingId}"
-                 style="display:inline-block;padding:12px 24px;background-color:#17a2b8;color:#ffffff;
-                        text-decoration:none;border-radius:6px;font-weight:bold;">
-                View Confirmation
-              </a>
-            </p>
-            <p>Thank you,<br>IHC Team</p>
-          `
-        );
-      }
-
-      // ✅ Return updated booking with IHC code
-      res.json({ success: true, booking });
-    } catch (err) {
-      console.error("❌ Error confirming payment:", err);
-      res.status(500).json({ success: false, message: "Server error confirming payment" });
+    // Notify candidate
+    if (booking.email) {
+      const frontendUrl = process.env.FRONTEND_URL || "https://ihc-portal-1.onrender.com";
+      await sendBookingNotification(
+        booking.email,
+        "IHC Payment Confirmed – Your IHC Code",
+        `
+          <p>Dear ${booking.firstName},</p>
+          <p>Your payment for booking <strong>${booking.bookingId}</strong> has been confirmed.</p>
+          <p>Your unique IHC Code is: <strong>${booking.ihcCode}</strong></p>
+          <p>You may download your confirmation letter from your portal.</p>
+          <p>
+            <a href="${frontendUrl}/step5.html?bookingId=${booking.bookingId}"
+               style="display:inline-block;padding:12px 24px;background-color:#17a2b8;color:#ffffff;
+                      text-decoration:none;border-radius:6px;font-weight:bold;">
+              View Confirmation
+            </a>
+          </p>
+          <p>Thank you,<br>IHC Team</p>
+        `
+      );
     }
-  });
+
+    // ✅ Make sure ihcCode is returned
+    res.json({ success: true, booking });
+  } catch (err) {
+    console.error("❌ Error confirming payment:", err);
+    res.status(500).json({ success: false, message: "Server error confirming payment" });
+  }
+});
+
 
   return router;
 };
