@@ -34,6 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.textContent = "Logging in...";
 
     try {
+      // Clear old session data
+      sessionStorage.clear();
+
       // Login
       const loginRes = await fetch(`${API_BASE}/login`, {
         method: "POST",
