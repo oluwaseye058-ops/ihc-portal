@@ -2,27 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Login to IHC Portal for NPRA Bahrain">
+  <meta name="keywords" content="IHC, NPRA, Bahrain, login">
   <title>IHC Portal - Login</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <main>
     <div class="logo-container">
-      <img src="images/npra-logo.png" alt="NPRA Logo" width="600" height="90">
+      <img src="images/npra-logo.png" alt="NPRA Logo" style="max-width: 100%; height: auto;">
     </div>
 
     <h2>Login to IHC Portal</h2>
-    <form id="loginForm">
-      <label>Email</label>
-      <input type="email" id="email" placeholder="Enter your email" required>
+    <form id="loginForm" action="/api/auth/login" method="POST">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="Enter your email" required>
 
-      <label>Password</label>
-      <input type="password" id="password" placeholder="Enter your password" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Enter your password" required>
 
       <button type="submit">Login</button>
     </form>
 
-    <p>
+    <p class="links">
       <a href="forgot-password.html">Forgot your password?</a> | 
       <a href="step1.html">Register</a>
     </p>
@@ -32,37 +35,6 @@
     <p>© 2025 NPRA Bahrain</p>
   </footer>
 
-  <script>
-    const API_BASE = "https://ihc-portal.onrender.com/api/auth";
-
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      try {
-        const res = await fetch(`${API_BASE}/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("userId", data.userId);
-          localStorage.setItem("fullName", data.fullName);
-          alert("Login successful!");
-          window.location.href = "step2.html";
-        } else {
-          alert(data.error || "Login failed");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Server error during login");
-      }
-    });
-  </script>
+  <script src="js/login.js"></script>
 </body>
 </html>
