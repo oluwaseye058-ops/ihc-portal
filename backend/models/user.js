@@ -1,4 +1,3 @@
-// backend/models/user.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -8,10 +7,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   paymentStatus: { type: String, default: "pending" },
   ihcCode: { type: String },
-  resetToken: String,
-  resetTokenExpiry: Date,
-
-  // ✅ for password reset
+  role: { type: String, default: "user" }, // Added for staffMiddleware
   resetToken: String,
   resetTokenExpiry: Date,
 });
