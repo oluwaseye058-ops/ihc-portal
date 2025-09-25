@@ -1,4 +1,3 @@
-// ✅ Load environment variables first
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -6,28 +5,29 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs"); // ✅ For password hashing
+const bcrypt = require("bcryptjs");
 
-const sendBookingNotification = require("./mailer"); // mailer
+const sendBookingNotification = require("./mailer");
 const User = require("./models/user");
 
-// 👉 Initialize app
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "https://ihc-portal-1.onrender.com",
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 app.use(express.json());
 
-// 👉 Mount auth routes
 const authRoutes = require("./routes/auth")(sendBookingNotification);
 app.use("/api/auth", authRoutes);
 
 const invoiceRoutes = require("./invoice")(sendBookingNotification);
 app.use("/api/invoice", invoiceRoutes);
 
-// 👉 Debug print env
 console.log("MONGODB_URI:", process.env.MONGODB_URI);
 console.log("SMTP_HOST:", process.env.SMTP_HOST);
+console.log("JWT_SECRET:", process.env.JWT_SECRET ? "Defined" : "Undefined");
 
-// 👉 Connect to MongoDB
 if (!process.env.MONGODB_URI) {
   console.error("❌ MONGODB_URI not set in .env or Render env");
   process.exit(1);
@@ -38,12 +38,8 @@ mongoose
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// 👉 Serve frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-/**
- * Registration endpoint
- */
 app.post("/api/register", async (req, res) => {
   try {
     const { firstName, middleName, lastName, email, password } = req.body;
@@ -69,7 +65,6 @@ app.post("/api/register", async (req, res) => {
     await user.save();
     console.log("✅ New registration:", user);
 
-    // Generate JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
 
     res.json({ success: true, userId: user._id, token });
@@ -79,32 +74,28 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-/**
- * Get current user (me)
- */
 app.get("/api/auth/me", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.error("Auth middleware: No token provided", { authHeader });
       return res.status(401).json({ error: "No token provided" });
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Auth: Verifying token", { token: token.slice(0, 10) + "..." });
 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
 
     res.json({ user });
   } catch (err) {
-    console.error("❌ /me error:", err);
+    console.error("❌ /me error:", { error: err.message, token: req.headers.authorization?.slice(0, 16) + "..." });
     res.status(401).json({ error: "Invalid or expired token" });
   }
 });
 
-/**
- * Status check (Step 2 portal)
- */
 app.get("/api/status/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -127,9 +118,6 @@ app.get("/api/status/:userId", async (req, res) => {
   }
 });
 
-/**
- * Payment update (Step 4)
- */
 app.post("/api/payment/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -162,15 +150,12 @@ app.post("/api/payment/:userId", async (req, res) => {
   }
 });
 
-// 👉 Import booking routes
-const bookingRoutes = require("./routes/booking") ;
+const bookingRoutes = require("./routes/booking");
 app.use("/api/booking", bookingRoutes(sendBookingNotification));
 
-// 👉 Test route
 app.get("/", (req, res) => {
   res.send("IHC Backend Running 🚀");
 });
 
-// 👉 Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

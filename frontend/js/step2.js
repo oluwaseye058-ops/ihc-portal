@@ -22,16 +22,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const userId = sessionStorage.getItem("userId");
 
   if (!token || !userId) {
+    console.error("Step2: Missing token or userId", { token: !!token, userId: !!userId });
     showMessage("Please login first.");
     setTimeout(() => (window.location.href = "login.html"), 1000);
     return;
   }
 
+  if (typeof token !== "string" || !token.includes(".") || token.trim() === "") {
+    console.error("Step2: Invalid token format", { token: token ? token.slice(0, 10) + "..." : "undefined" });
+    showMessage("Invalid session token. Please login again.");
+    sessionStorage.clear();
+    setTimeout(() => (window.location.href = "login.html"), 1000);
+    return;
+  }
+
+  console.log("Step2: Using token", { token: token.slice(0, 10) + "...", userId });
+
   const logout = () => {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("userId");
-    sessionStorage.removeItem("fullName");
-    sessionStorage.removeItem("email");
+    sessionStorage.clear();
     showMessage("Logged out successfully!", false);
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
@@ -43,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = "invoice.html";
   };
 
-  // Add logout button if not present
   let logoutBtn = document.getElementById("logoutBtn");
   if (!logoutBtn) {
     logoutBtn = document.createElement("button");
@@ -61,21 +68,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const fetchUserData = async () => {
     try {
+      const authHeader = `Bearer ${token}`;
+      console.log("Step2: Sending GET /api/auth/me", { headers: { Authorization: authHeader.slice(0, 16) + "..." } });
+
       const statusRes = await fetch(`${API_BASE}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        method: "GET",
+        headers: { Authorization: authHeader, "Content-Type": "application/json" },
       });
 
       if (!statusRes.ok) {
         const data = await statusRes.json();
-        showMessage(data.error || `Session expired: ${statusRes.status}`);
-        setTimeout(() => (window.location.href = "login.html"), 1000);
-        return;
+        console.error("Step2: Fetch user data failed", {
+          endpoint: `${API_BASE}/api/auth/me`,
+          status: statusRes.status,
+          error: data.error,
+          sentHeaders: { Authorization: authHeader.slice(0, 16) + "..." },
+        });
+        if (statusRes.status === 401) {
+          showMessage("Your session has expired. Please login again.");
+          sessionStorage.clear();
+          setTimeout(() => (window.location.href = "login.html"), 1000);
+          return;
+        }
+        throw new Error(data.error || `HTTP ${statusRes.status}`);
       }
 
       const { user } = await statusRes.json();
-      console.log("User data:", user); // Debug: log response
+      console.log("Step2: User data:", user);
       if (!user || !user._id) {
         showMessage("Invalid user data.");
+        sessionStorage.clear();
+        setTimeout(() => (window.location.href = "login.html"), 1000);
         return;
       }
 
@@ -85,30 +108,46 @@ document.addEventListener("DOMContentLoaded", () => {
       sessionStorage.setItem("email", sanitize(user.email));
       startBtn.disabled = false;
     } catch (err) {
-      console.error("Error fetching user data:", {
+      console.error("Step2: Error fetching user data:", {
         endpoint: `${API_BASE}/api/auth/me`,
         error: err.message,
       });
-      welcomeEl.textContent = "Unable to fetch status. Please try again later.";
       showMessage("Error connecting to server.");
     }
   };
 
   const fetchBookings = async () => {
-    // Note: GET /api/booking/:userId is not defined in routes/booking.js
-    // Implemented in booking.js for compatibility; confirm if another endpoint exists
     try {
+      const authHeader = `Bearer ${token}`;
+      console.log("Step2: Sending GET /api/booking/:userId", {
+        endpoint: `${API_BASE}/api/booking/${userId}`,
+        headers: { Authorization: authHeader.slice(0, 16) + "..." },
+      });
+
       const bookingRes = await fetch(`${API_BASE}/api/booking/${userId}`, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        method: "GET",
+        headers: { Authorization: authHeader, "Content-Type": "application/json" },
       });
 
       if (!bookingRes.ok) {
         const data = await bookingRes.json();
-        showMessage(data.message || `Failed to fetch bookings: ${bookingRes.status}`);
-        return;
+        console.error("Step2: Fetch bookings failed", {
+          endpoint: `${API_BASE}/api/booking/${userId}`,
+          status: bookingRes.status,
+          error: data.error || data.message,
+          sentHeaders: { Authorization: authHeader.slice(0, 16) + "..." },
+        });
+        if (bookingRes.status === 401) {
+          showMessage("Your session has expired. Please login again.");
+          sessionStorage.clear();
+          setTimeout(() => (window.location.href = "login.html"), 1000);
+          return;
+        }
+        throw new Error(data.error || data.message || `HTTP ${bookingRes.status}`);
       }
 
       const bookingData = await bookingRes.json();
+      console.log("Step2: Booking fetch response:", bookingData);
       const userBookings = bookingData.bookings || [];
 
       bookingList.innerHTML = "";
@@ -152,7 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
         invoiceBtn.onclick = () => viewInvoice(latest);
       }
     } catch (err) {
-      console.error("Error fetching bookings:", {
+      console.error("Step2: Error fetching bookings:", {
         endpoint: `${API_BASE}/api/booking/${userId}`,
         error: err.message,
       });
@@ -160,6 +199,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  fetchUserData();
-  fetchBookings();
+  const init = async () => {
+    await fetchUserData();
+    await fetchBookings();
+  };
+  init();
 });
