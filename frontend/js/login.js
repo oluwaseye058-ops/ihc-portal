@@ -25,9 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Dynamic backend selection
-  const API_BASE = window.location.hostname.includes("ihc-portal-1")
-    ? "https://ihc-portal-1.onrender.com"
-    : "https://ihc-portal.onrender.com";
+  const API_BASE = "https://ihc-portal.onrender.com";
+
 
   const showMessage = (message, isError = true) => {
     msgDiv.className = `message ${isError ? "error" : "success"}`;
