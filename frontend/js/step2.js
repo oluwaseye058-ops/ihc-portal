@@ -6,42 +6,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const bookingList = document.getElementById("bookingList");
   const bookingStatusEl = document.getElementById("bookingStatus");
   const invoiceBtn = document.getElementById("invoiceBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
   const API_BASE = "https://ihc-portal.onrender.com";
 
-  /** -------------------------------
-   * Utility functions
-   * ------------------------------- */
+  // --- Helpers ---
   const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
 
   const showMessage = (msg, isError = true) => {
     const div = document.createElement("div");
     div.className = `message ${isError ? "error" : "success"}`;
     div.textContent = msg;
-
-    const closeBtn = document.createElement("button");
-    closeBtn.textContent = "×";
-    closeBtn.className = "close-btn";
-    closeBtn.setAttribute("aria-label", "Dismiss message");
-    closeBtn.addEventListener("click", () => div.remove());
-    div.appendChild(closeBtn);
-
-    document.getElementById("messages")?.appendChild(div);
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
   };
-
-  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
-  const userId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
 
   const handleExpired = () => {
     sessionStorage.clear();
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
+    localStorage.removeItem("fullName");
+    localStorage.removeItem("email");
     showMessage("Session expired. Please login.");
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
 
+  // --- Session check ---
+  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+  const userId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
+
   if (!token || !userId) return handleExpired();
 
-  // Optional: Check JWT expiry
   const parseJwt = (t) => {
     try {
       return JSON.parse(atob(t.split(".")[1]));
@@ -52,21 +46,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const payload = parseJwt(token);
   if (!payload || payload.exp * 1000 < Date.now()) return handleExpired();
 
+  // --- Logout handler ---
   const logout = () => {
     sessionStorage.clear();
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
+    localStorage.clear();
     showMessage("Logged out!", false);
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
+  logoutBtn?.addEventListener("click", logout);
 
-  document.getElementById("logoutBtn")?.addEventListener("click", logout);
-
+  // --- Navigation ---
   startBtn.addEventListener("click", () => (window.location.href = "step3.html"));
 
-  /** -------------------------------
-   * Fetch user data
-   * ------------------------------- */
+  // --- Fetch user data ---
   const fetchUserData = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
@@ -77,21 +69,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const { user } = await res.json();
       welcomeEl.textContent = `Welcome ${sanitize(user.fullName)}`;
-      paymentStatusEl.textContent = `Payment Status: ${sanitize(
-        user.paymentStatus
-      ) || "pending"}`;
-      ihcCodeEl.textContent = user.ihcCode
-        ? `IHC Code: ${sanitize(user.ihcCode)}`
-        : "";
+      paymentStatusEl.textContent = `Payment Status: ${sanitize(user.paymentStatus) || "pending"}`;
+      ihcCodeEl.textContent = user.ihcCode ? `IHC Code: ${sanitize(user.ihcCode)}` : "";
     } catch (err) {
       console.error(err);
       showMessage("Error connecting to server.");
     }
   };
 
-  /** -------------------------------
-   * Fetch bookings
-   * ------------------------------- */
+  // --- Fetch bookings ---
   const fetchBookings = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/booking/${userId}`, {
@@ -103,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
       const bookings = data.bookings || [];
       bookingList.innerHTML = "";
-      invoiceBtn.style.display = "none"; // reset every load
+      invoiceBtn.style.display = "none";
 
       if (!bookings.length) {
         bookingList.innerHTML = "<li>No bookings</li>";
@@ -112,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       bookings.forEach((b) => {
         const li = document.createElement("li");
+        li.classList.add("booking-item");
         li.innerHTML = `
           <div>
             <p><strong>ID:</strong> ${sanitize(b.bookingId)}</p>
@@ -121,51 +108,36 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `;
 
-        // Approved bookings → show invoice on click
-        if (b.bookingStatus?.toLowerCase() === "approved") {
-          li.addEventListener("click", () => {
-            invoiceBtn.style.display = "inline-block";
-            invoiceBtn.onclick = () => {
-              window.location.href = `${API_BASE}/api/invoice/${sanitize(
-                b.bookingId
-              )}?token=${token}`;
-            };
-          });
-        } else {
-          // Not yet approved → show delete button
+        // If booking not approved -> allow delete
+        if (b.bookingStatus !== "approved") {
           const delBtn = document.createElement("button");
           delBtn.textContent = "Delete";
           delBtn.className = "btn btn-small logout-btn";
-          delBtn.setAttribute(
-            "aria-label",
-            `Delete booking ${sanitize(b.bookingId)}`
-          );
-          delBtn.addEventListener("click", async (e) => {
-            e.stopPropagation(); // prevent invoice click
+          delBtn.addEventListener("click", async () => {
             if (!confirm("Are you sure you want to delete this booking?")) return;
-
             try {
-              const delRes = await fetch(
-                `${API_BASE}/api/booking/${sanitize(b.bookingId)}`,
-                {
-                  method: "DELETE",
-                  headers: { Authorization: `Bearer ${token}` },
-                }
-              );
+              const delRes = await fetch(`${API_BASE}/api/booking/${b.bookingId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
               if (delRes.status === 401) return handleExpired();
-              if (!delRes.ok) {
-                const errData = await delRes.json().catch(() => ({}));
-                return showMessage(errData.error || "Failed to delete booking.");
-              }
-
-              showMessage("Booking deleted successfully.", false);
-              fetchBookings(); // refresh list
+              if (!delRes.ok) return showMessage("Error deleting booking.");
+              showMessage("Booking deleted!", false);
+              fetchBookings();
             } catch (err) {
               console.error(err);
               showMessage("Error deleting booking.");
             }
           });
           li.appendChild(delBtn);
+        }
+
+        // If booking approved -> show invoice button
+        if (b.bookingStatus === "approved") {
+          invoiceBtn.style.display = "inline-block";
+          invoiceBtn.onclick = () => {
+            window.location.href = `invoice.html?bookingId=${encodeURIComponent(b.bookingId)}`;
+          };
         }
 
         bookingList.appendChild(li);
@@ -176,9 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  /** -------------------------------
-   * Init
-   * ------------------------------- */
+  // --- Init ---
   fetchUserData();
   fetchBookings();
 });

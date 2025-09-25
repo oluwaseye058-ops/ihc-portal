@@ -421,16 +421,11 @@ footer {
   display: none;
 }
 
-.portal-header {
+
+.action-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #ddd;
-  padding: 10px 20px;
+  margin: 20px 0;
 }
 
-.portal-header img {
-  max-height: 50px;
-  height: auto;
-}
