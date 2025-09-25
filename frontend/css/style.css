@@ -345,6 +345,25 @@ footer {
   }
 }
 
+/* Spinner */
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Password eye toggle */
 .password-container {
   position: relative;
   display: flex;
@@ -362,5 +381,19 @@ footer {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.password-container svg {
+  width: 20px;
+  height: 20px;
+  stroke: #555;
+}
+
+/* Utility hidden class */
+.hidden {
+  display: none;
 }
