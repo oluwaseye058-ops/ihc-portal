@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("logoutBtn");
   const API_BASE = "https://ihc-portal.onrender.com";
 
-  // --- Helpers ---
   const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
 
   const showMessage = (msg, isError = true) => {
@@ -27,10 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
 
-  // --- Session check ---
   const token = sessionStorage.getItem("token") || localStorage.getItem("token");
   const userId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
-
   if (!token || !userId) return handleExpired();
 
   const parseJwt = (t) => {
@@ -43,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const payload = parseJwt(token);
   if (!payload || payload.exp * 1000 < Date.now()) return handleExpired();
 
-  // --- Logout handler ---
   const logout = () => {
     sessionStorage.clear();
     localStorage.clear();
@@ -52,10 +48,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   logoutBtn?.addEventListener("click", logout);
 
-  // --- Navigation ---
   startBtn.addEventListener("click", () => (window.location.href = "step3.html"));
 
-  // --- Fetch user data ---
   const fetchUserData = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
@@ -74,7 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // --- Fetch bookings ---
   const fetchBookings = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/booking/${userId}`, {
@@ -105,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `;
 
-        // If booking not approved -> allow delete
+        // Delete button for non-approved bookings
         if (b.bookingStatus !== "approved") {
           const delBtn = document.createElement("button");
           delBtn.textContent = "Delete";
@@ -113,16 +106,15 @@ document.addEventListener("DOMContentLoaded", () => {
           delBtn.addEventListener("click", async () => {
             if (!confirm("Are you sure you want to delete this booking?")) return;
             try {
-              const delRes = await fetch(`${API_BASE}/api/booking/${b._id}`, {
+              // Use bookingId for backend DELETE
+              const delRes = await fetch(`${API_BASE}/api/booking/${b.bookingId}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
               });
               if (delRes.status === 401) return handleExpired();
 
-              if (!delRes.ok) {
-                const errData = await delRes.json().catch(() => ({}));
-                return showMessage(errData.error || `Error deleting booking (status ${delRes.status}).`);
-              }
+              const delData = await delRes.json().catch(() => ({}));
+              if (!delRes.ok) return showMessage(delData.message || "Error deleting booking.");
 
               showMessage("Booking deleted!", false);
               fetchBookings();
@@ -134,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
           li.appendChild(delBtn);
         }
 
-        // If booking approved -> show invoice button
+        // Show invoice button for approved bookings
         if (b.bookingStatus === "approved") {
           invoiceBtn.style.display = "inline-block";
           invoiceBtn.onclick = () => {
@@ -150,9 +142,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // --- Init ---
   fetchUserData();
   fetchBookings();
 });
-
-//db

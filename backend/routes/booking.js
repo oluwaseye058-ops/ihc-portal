@@ -260,5 +260,24 @@ module.exports = function (sendBookingNotification) {
     }
   });
 
+  // DELETE /api/booking/:bookingId → delete booking if not approved
+router.delete("/:bookingId", authMiddleware, async (req, res) => {
+  try {
+    const booking = await Booking.findOne({ bookingId: req.params.bookingId });
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    if (booking.bookingStatus === "approved") {
+      return res.status(400).json({ success: false, message: "Approved bookings cannot be deleted" });
+    }
+
+    await booking.deleteOne();
+    res.json({ success: true, message: "Booking deleted successfully" });
+  } catch (err) {
+    console.error("❌ Error deleting booking:", err.message);
+    res.status(500).json({ success: false, message: "Server error deleting booking" });
+  }
+});
+
+
   return router;
 };
