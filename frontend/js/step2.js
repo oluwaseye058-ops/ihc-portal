@@ -245,3 +245,5 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   init();
 });
+
+//improved handling
