@@ -52,6 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
         userId: data.userId,
         fullName: data.fullName,
         email,
+        domain: window.location.hostname,
       });
 
       const meRes = await fetch(`${API_BASE}/api/auth/me`, {
@@ -77,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => (window.location.href = "step2.html"), 1000);
     } catch (err) {
       console.error("Login: Error", { error: err.message });
-      showMessage("Error connecting to server.");
+      showMessage("Error connecting to server. Please try again later.");
     }
   });
 });

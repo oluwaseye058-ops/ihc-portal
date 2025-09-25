@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
         endpoint: `${API_BASE}/api/auth/me`,
         error: err.message,
       });
-      showMessage("Error connecting to server.");
+      showMessage("Error connecting to server. Please try again later.");
     }
   };
 
@@ -172,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
           setTimeout(() => (window.location.href = "login.html"), 1000);
           return;
         }
-        throw new Error(data.error || data.message || `HTTP ${statusRes.status}`);
+        throw new Error(data.error || data.message || `HTTP ${bookingRes.status}`);
       }
 
       const bookingData = await bookingRes.json();
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
         endpoint: `${API_BASE}/api/booking/${userId}`,
         error: err.message,
       });
-      showMessage("Error loading bookings.");
+      showMessage("Error loading bookings. Server may be down.");
     }
   };
 
