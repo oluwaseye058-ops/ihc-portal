@@ -8,20 +8,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const ihcCodeEl = document.getElementById("ihcCode");
   const API_BASE = "https://ihc-portal.onrender.com";
 
-  const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
-  const showMessage = (msg, isError = true) => {
-    const div = document.createElement("div");
-    div.className = `message ${isError ? "error" : "success"}`;
-    div.textContent = msg;
-    document.body.appendChild(div);
-    setTimeout(() => div.remove(), 4000);
+  const showMessage = (message, isError = true) => {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `message ${isError ? "error" : "success"}`;
+    msgDiv.textContent = message;
+    document.body.appendChild(msgDiv);
+    setTimeout(() => msgDiv.remove(), 5000);
   };
 
-  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
-  const userId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
+  const sanitize = (input) => input.replace(/[<>"'%;()&]/g, "");
+
+  const userId = sessionStorage.getItem("userId");
+  const token = sessionStorage.getItem("token");
   const selectedBookingId = sessionStorage.getItem("selectedBookingId");
 
-  if (!token || !userId || !selectedBookingId) {
+  if (!userId || !token || !selectedBookingId) {
     showMessage("Session expired or no booking selected. Please login or complete Step 3.");
     setTimeout(() => (window.location.href = "login.html"), 1000);
     return;
@@ -32,31 +33,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const fetchBooking = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/booking/${userId}`, {
-        headers: { "Authorization": `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || `HTTP ${res.status}`);
       }
 
       const data = await res.json();
-      if (!data.success || !data.bookings || data.bookings.length === 0) {
-        showMessage("No booking found. Please complete Step 3 first.");
-        setTimeout(() => (window.location.href = "step3.html"), 1000);
-        return null;
-      }
-
       bookingData = data.bookings.find((b) => b.bookingId === selectedBookingId);
       if (!bookingData) {
         showMessage("Selected booking not found.");
         setTimeout(() => (window.location.href = "step2.html"), 1000);
         return null;
       }
-
       return bookingData;
     } catch (err) {
-      console.error("Error fetching booking:", err);
+      console.error(err);
       showMessage("Unable to load booking details. Please try again later.");
       return null;
     }
@@ -65,22 +58,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const renderBookingSummary = () => {
     if (!bookingData) return;
     bookingSummaryEl.innerHTML = `
-      <p><strong>Name:</strong> ${sanitize(bookingData.firstName || "")} ${sanitize(bookingData.middleName || "")} ${sanitize(bookingData.lastName || "")}</p>
-      <p><strong>Passport:</strong> ${sanitize(bookingData.passportNumber || "N/A")}</p>
-      <p><strong>Nationality:</strong> ${sanitize(bookingData.nationality || "N/A")}</p>
-      <p><strong>Date of Birth:</strong> ${sanitize(bookingData.dob || "N/A")}</p>
-      <p><strong>Address:</strong> ${sanitize(bookingData.address || "N/A")}</p>
-      <p><strong>Company Sponsor:</strong> ${sanitize(bookingData.sponsorCompany || "N/A")}</p>
-      <p><strong>Airline Sponsor:</strong> ${sanitize(bookingData.sponsorAirline || "N/A")}</p>
-      <p><strong>Appointment:</strong> ${sanitize(bookingData.bookingDate || "N/A")} at ${sanitize(bookingData.timeSlot || "N/A")}</p>
-      <p><strong>Status:</strong> ${sanitize(bookingData.bookingStatus || "N/A")}</p>
-      <p><strong>Payment Status:</strong> ${sanitize(bookingData.paymentStatus || "pending")}</p>
+      <p><strong>Name:</strong> ${sanitize(bookingData.firstName || '')} ${sanitize(bookingData.middleName || '')} ${sanitize(bookingData.lastName || '')}</p>
+      <p><strong>Passport:</strong> ${sanitize(bookingData.passportNumber || 'N/A')}</p>
+      <p><strong>Nationality:</strong> ${sanitize(bookingData.nationality || 'N/A')}</p>
+      <p><strong>Date of Birth:</strong> ${sanitize(bookingData.dob || 'N/A')}</p>
+      <p><strong>Address:</strong> ${sanitize(bookingData.address || 'N/A')}</p>
+      <p><strong>Company Sponsor:</strong> ${sanitize(bookingData.sponsorCompany || 'N/A')}</p>
+      <p><strong>Airline Sponsor:</strong> ${sanitize(bookingData.sponsorAirline || 'N/A')}</p>
+      <p><strong>Appointment:</strong> ${sanitize(bookingData.bookingDate || 'N/A')} at ${sanitize(bookingData.timeSlot || 'N/A')}</p>
+      <p><strong>Status:</strong> ${sanitize(bookingData.bookingStatus || 'N/A')}</p>
+      <p><strong>Payment Status:</strong> ${sanitize(bookingData.paymentStatus || 'pending')}</p>
     `;
   };
 
   const updateUI = () => {
     if (!bookingData) return;
 
+    // Show invoice if approved
     if (bookingData.bookingStatus === "approved" && bookingData.invoiceUrl) {
       invoiceContainer.style.display = "block";
       invoiceLink.href = sanitize(bookingData.invoiceUrl);
@@ -88,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
       invoiceContainer.style.display = "none";
     }
 
+    // Show IHC code if payment confirmed
     if (bookingData.paymentStatus === "confirmed" && bookingData.ihcCode) {
       ihcCodeContainer.style.display = "block";
       ihcCodeEl.textContent = sanitize(bookingData.ihcCode);
@@ -102,7 +97,6 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const method = paymentMethodEl.value;
     const validMethods = ["bankTransfer", "paypal", "westernUnion", "moneyGram"];
-
     if (!validMethods.includes(method)) {
       showMessage("Please select a valid payment method.");
       return;
@@ -112,8 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(`${API_BASE}/api/booking/${userId}/paymentMethod`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ paymentMethod: method, booking: { bookingId: bookingData.bookingId } }),
       });
@@ -122,14 +116,18 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.ok && result.success) {
         bookingData.paymentMethod = method;
         bookingData.bookingStatus = "pendingApproval";
+        bookingData.paymentStatus = "pending";
         sessionStorage.setItem("booking", JSON.stringify(bookingData));
+
+        // ✅ New message for candidate
         showMessage(
-          "Payment method submitted. IHC staff will approve your booking and generate your invoice. Check your email.",
+          "Booking completed! Please check your email for confirmation. You will be redirected to your portal.",
           false
         );
-        setTimeout(() => (window.location.href = "step2.html"), 1500);
+
+        setTimeout(() => window.location.href = "step2.html", 2000); // redirect after 2s
       } else {
-        showMessage(result.message || "Failed to submit payment method.");
+        showMessage(`Failed to submit payment method: ${result.message || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Error submitting payment method:", err);
@@ -144,6 +142,5 @@ document.addEventListener("DOMContentLoaded", () => {
       updateUI();
     }
   };
-
   init();
 });
