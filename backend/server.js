@@ -24,6 +24,9 @@ app.use("/api/auth", authRoutes);
 const invoiceRoutes = require("./invoice")(sendBookingNotification);
 app.use("/api/invoice", invoiceRoutes);
 
+const bookingRoutes = require("./routes/booking");
+app.use("/api/booking", bookingRoutes(sendBookingNotification));
+
 console.log("MONGODB_URI:", process.env.MONGODB_URI);
 console.log("SMTP_HOST:", process.env.SMTP_HOST);
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "Defined" : "Undefined");
@@ -37,8 +40,6 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
-
-app.use(express.static(path.join(__dirname, "../frontend")));
 
 app.post("/api/register", async (req, res) => {
   try {
@@ -77,8 +78,9 @@ app.post("/api/register", async (req, res) => {
 app.get("/api/auth/me", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
+    console.log("Auth: authMiddleware called", { authHeader: authHeader ? authHeader.slice(0, 16) + "..." : "undefined" });
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.error("Auth middleware: No token provided", { authHeader });
+      console.error("Auth: No token provided", { authHeader });
       return res.status(401).json({ error: "No token provided" });
     }
 
@@ -150,8 +152,7 @@ app.post("/api/payment/:userId", async (req, res) => {
   }
 });
 
-const bookingRoutes = require("./routes/booking");
-app.use("/api/booking", bookingRoutes(sendBookingNotification));
+app.use(express.static(path.join(__dirname, "../frontend")));
 
 app.get("/", (req, res) => {
   res.send("IHC Backend Running 🚀");

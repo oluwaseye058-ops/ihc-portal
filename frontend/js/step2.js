@@ -22,7 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const userId = sessionStorage.getItem("userId");
 
   if (!token || !userId) {
-    console.error("Step2: Missing token or userId", { token: !!token, userId: !!userId });
+    console.error("Step2: Missing token or userId", {
+      tokenPresent: !!token,
+      userIdPresent: !!userId,
+      sessionKeys: Object.keys(sessionStorage),
+    });
     showMessage("Please login first.");
     setTimeout(() => (window.location.href = "login.html"), 1000);
     return;
@@ -36,7 +40,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  console.log("Step2: Using token", { token: token.slice(0, 10) + "...", userId });
+  console.log("Step2: Session data", {
+    token: token.slice(0, 10) + "...",
+    userId,
+    fullName: sessionStorage.getItem("fullName"),
+    email: sessionStorage.getItem("email"),
+    currentDomain: window.location.hostname,
+  });
 
   const logout = () => {
     sessionStorage.clear();
@@ -69,7 +79,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const fetchUserData = async () => {
     try {
       const authHeader = `Bearer ${token}`;
-      console.log("Step2: Sending GET /api/auth/me", { headers: { Authorization: authHeader.slice(0, 16) + "..." } });
+      console.log("Step2: Sending GET /api/auth/me", {
+        endpoint: `${API_BASE}/api/auth/me`,
+        headers: { Authorization: authHeader.slice(0, 16) + "..." },
+      });
 
       const statusRes = await fetch(`${API_BASE}/api/auth/me`, {
         method: "GET",
@@ -81,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Step2: Fetch user data failed", {
           endpoint: `${API_BASE}/api/auth/me`,
           status: statusRes.status,
-          error: data.error,
+          error: data.error || data.message,
           sentHeaders: { Authorization: authHeader.slice(0, 16) + "..." },
         });
         if (statusRes.status === 401) {
@@ -90,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
           setTimeout(() => (window.location.href = "login.html"), 1000);
           return;
         }
-        throw new Error(data.error || `HTTP ${statusRes.status}`);
+        throw new Error(data.error || data.message || `HTTP ${statusRes.status}`);
       }
 
       const { user } = await statusRes.json();
@@ -119,12 +132,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const fetchBookings = async () => {
     try {
       const authHeader = `Bearer ${token}`;
+      const bookingEndpoint = `${API_BASE}/api/booking/${userId}`;
       console.log("Step2: Sending GET /api/booking/:userId", {
-        endpoint: `${API_BASE}/api/booking/${userId}`,
-        headers: { Authorization: authHeader.slice(0, 16) + "..." },
+        endpoint: bookingEndpoint,
+        headers: { Authorization: authHeader },
+        domain: window.location.hostname,
       });
 
-      const bookingRes = await fetch(`${API_BASE}/api/booking/${userId}`, {
+      const bookingRes = await fetch(bookingEndpoint, {
         method: "GET",
         headers: { Authorization: authHeader, "Content-Type": "application/json" },
       });
@@ -132,10 +147,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!bookingRes.ok) {
         const data = await bookingRes.json();
         console.error("Step2: Fetch bookings failed", {
-          endpoint: `${API_BASE}/api/booking/${userId}`,
+          endpoint: bookingEndpoint,
           status: bookingRes.status,
-          error: data.error || data.message,
-          sentHeaders: { Authorization: authHeader.slice(0, 16) + "..." },
+          error: data.error || data.message || "No error message provided",
+          sentHeaders: { Authorization: authHeader },
         });
         if (bookingRes.status === 401) {
           showMessage("Your session has expired. Please login again.");
@@ -200,6 +215,13 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const init = async () => {
+    if (window.location.hostname !== "ihc-portal-1.onrender.com") {
+      console.warn("Step2: Domain mismatch", {
+        expected: "ihc-portal-1.onrender.com",
+        actual: window.location.hostname,
+      });
+      showMessage("Domain mismatch detected. Please ensure you’re on the correct site.");
+    }
     await fetchUserData();
     await fetchBookings();
   };
