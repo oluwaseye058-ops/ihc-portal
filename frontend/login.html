@@ -8,7 +8,7 @@
   <title>IHC Portal - Login</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* Simple inline spinner style (can also move to style.css) */
+    /* Spinner */
     .spinner {
       border: 3px solid #f3f3f3;
       border-top: 3px solid #007bff;
@@ -24,6 +24,22 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* Password wrapper */
+    .password-wrapper {
+      position: relative;
+    }
+    .toggle-password {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 0.9em;
+      background: none;
+      border: none;
+      color: #007bff;
+    }
   </style>
 </head>
 <body>
@@ -38,7 +54,10 @@
       <input type="email" id="email" name="email" placeholder="Enter your email" required>
 
       <label for="password">Password</label>
-      <input type="password" id="password" name="password" placeholder="Enter your password" required>
+      <div class="password-wrapper">
+        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+        <button type="button" id="togglePassword" class="toggle-password">Show</button>
+      </div>
 
       <button type="submit" id="loginBtn">Login</button>
     </form>
