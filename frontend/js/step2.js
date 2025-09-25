@@ -18,14 +18,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const sanitize = (input) => input.replace(/[<>"'%;()&]/g, "");
 
-  const token = sessionStorage.getItem("token");
-  const userId = sessionStorage.getItem("userId");
+  let token = sessionStorage.getItem("token") || localStorage.getItem("token");
+  const userId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
 
   if (!token || !userId) {
     console.error("Step2: Missing token or userId", {
       tokenPresent: !!token,
       userIdPresent: !!userId,
       sessionKeys: Object.keys(sessionStorage),
+      localStorageKeys: Object.keys(localStorage),
     });
     showMessage("Please login first.");
     setTimeout(() => (window.location.href = "login.html"), 1000);
@@ -36,6 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("Step2: Invalid token format", { token: token ? token.slice(0, 10) + "..." : "undefined" });
     showMessage("Invalid session token. Please login again.");
     sessionStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
     setTimeout(() => (window.location.href = "login.html"), 1000);
     return;
   }
@@ -43,13 +46,15 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("Step2: Session data", {
     token: token.slice(0, 10) + "...",
     userId,
-    fullName: sessionStorage.getItem("fullName"),
-    email: sessionStorage.getItem("email"),
+    fullName: sessionStorage.getItem("fullName") || localStorage.getItem("fullName"),
+    email: sessionStorage.getItem("email") || localStorage.getItem("email"),
     currentDomain: window.location.hostname,
   });
 
   const logout = () => {
     sessionStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
     showMessage("Logged out successfully!", false);
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
@@ -100,6 +105,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (statusRes.status === 401) {
           showMessage("Your session has expired. Please login again.");
           sessionStorage.clear();
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
           setTimeout(() => (window.location.href = "login.html"), 1000);
           return;
         }
@@ -111,6 +118,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!user || !user._id) {
         showMessage("Invalid user data.");
         sessionStorage.clear();
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
         setTimeout(() => (window.location.href = "login.html"), 1000);
         return;
       }
@@ -119,6 +128,9 @@ document.addEventListener("DOMContentLoaded", () => {
       sessionStorage.setItem("userId", sanitize(user._id));
       sessionStorage.setItem("fullName", sanitize(user.fullName));
       sessionStorage.setItem("email", sanitize(user.email));
+      localStorage.setItem("userId", sanitize(user._id));
+      localStorage.setItem("fullName", sanitize(user.fullName));
+      localStorage.setItem("email", sanitize(user.email));
       startBtn.disabled = false;
     } catch (err) {
       console.error("Step2: Error fetching user data:", {
@@ -155,10 +167,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (bookingRes.status === 401) {
           showMessage("Your session has expired. Please login again.");
           sessionStorage.clear();
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
           setTimeout(() => (window.location.href = "login.html"), 1000);
           return;
         }
-        throw new Error(data.error || data.message || `HTTP ${bookingRes.status}`);
+        throw new Error(data.error || data.message || `HTTP ${statusRes.status}`);
       }
 
       const bookingData = await bookingRes.json();
@@ -220,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
         expected: "ihc-portal-1.onrender.com",
         actual: window.location.hostname,
       });
-      showMessage("Domain mismatch detected. Please ensure you’re on the correct site.");
+      showMessage("Domain mismatch detected. Please use https://ihc-portal-1.onrender.com.");
     }
     await fetchUserData();
     await fetchBookings();
