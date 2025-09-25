@@ -5,6 +5,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginBtn = document.getElementById("loginBtn");
   const msgDiv = document.getElementById("message");
 
+  // Password toggle
+  const togglePassword = document.getElementById("togglePassword");
+  const eyeOpen = document.getElementById("eyeOpen");
+  const eyeClosed = document.getElementById("eyeClosed");
+
+  togglePassword.addEventListener("click", () => {
+    const isPassword = passwordInput.type === "password";
+    passwordInput.type = isPassword ? "text" : "password";
+
+    // Swap icons
+    if (isPassword) {
+      eyeOpen.classList.add("hidden");
+      eyeClosed.classList.remove("hidden");
+    } else {
+      eyeOpen.classList.remove("hidden");
+      eyeClosed.classList.add("hidden");
+    }
+  });
+
   // Dynamic backend selection
   const API_BASE = window.location.hostname.includes("ihc-portal-1")
     ? "https://ihc-portal-1.onrender.com"
@@ -49,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("Login: Response", data);
 
       if (!res.ok) {
-        showMessage(data.error || "Login failed. Please check your credentials.");
+        showMessage("Login failed. Please check your credentials.");
         return;
       }
 
