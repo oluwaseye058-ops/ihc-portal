@@ -11,12 +11,15 @@ const sendBookingNotification = require("./mailer");
 const User = require("./models/user");
 
 const app = express();
+
+// ✅ CORS — relaxed for now so frontend can connect
 app.use(cors({
-  origin: ["https://ihc-portal-1.onrender.com", "https://ihc-portal.onrender.com"],
-  credentials: true,
+  origin: "*",
   allowedHeaders: ["Content-Type", "Authorization"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 }));
+
+// Debug middleware: log requests
 app.use((req, res, next) => {
   console.log("Request received:", {
     method: req.method,
@@ -26,8 +29,10 @@ app.use((req, res, next) => {
   });
   next();
 });
+
 app.use(express.json());
 
+// ✅ Routes
 const authRoutes = require("./routes/auth")(sendBookingNotification);
 app.use("/api/auth", authRoutes);
 
@@ -37,6 +42,7 @@ app.use("/api/invoice", invoiceRoutes);
 const bookingRoutes = require("./routes/booking");
 app.use("/api/booking", bookingRoutes(sendBookingNotification));
 
+// ✅ Connection info logs
 console.log("MONGODB_URI:", process.env.MONGODB_URI);
 console.log("SMTP_HOST:", process.env.SMTP_HOST);
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "Defined" : "Undefined");
@@ -46,45 +52,13 @@ if (!process.env.MONGODB_URI) {
   process.exit(1);
 }
 
+// ✅ MongoDB connect
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-app.post("/api/register", async (req, res) => {
-  try {
-    const { firstName, middleName, lastName, email, password } = req.body;
-    if (!firstName || !lastName || !email || !password) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(409).json({ error: "Email already registered" });
-    }
-
-    const fullName = `${firstName} ${middleName || ""} ${lastName}`.trim();
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({
-      fullName,
-      email,
-      password: hashedPassword,
-      paymentStatus: "pending",
-    });
-
-    await user.save();
-    console.log("✅ New registration:", user);
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
-
-    res.json({ success: true, userId: user._id, token });
-  } catch (err) {
-    console.error("❌ Registration error:", err);
-    res.status(500).json({ error: "Server error during registration" });
-  }
-});
-
+// ✅ Auth check
 app.get("/api/auth/me", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -108,6 +82,7 @@ app.get("/api/auth/me", async (req, res) => {
   }
 });
 
+// ✅ Payment status check
 app.get("/api/status/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -130,6 +105,7 @@ app.get("/api/status/:userId", async (req, res) => {
   }
 });
 
+// ✅ Payment update
 app.post("/api/payment/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -162,11 +138,13 @@ app.post("/api/payment/:userId", async (req, res) => {
   }
 });
 
+// ✅ Serve frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
 app.get("/", (req, res) => {
   res.send("IHC Backend Running 🚀");
 });
 
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
