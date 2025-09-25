@@ -2,15 +2,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("loginForm");
   const emailInput = document.getElementById("email");
   const passwordInput = document.getElementById("password");
-  const API_BASE = "https://ihc-portal.onrender.com";
+  const loginBtn = document.getElementById("loginBtn");
+  const msgDiv = document.getElementById("message");
+  const togglePasswordBtn = document.getElementById("togglePassword");
+  const capsWarning = document.getElementById("capsWarning");
+
+  // Auto-select correct backend
+  const API_BASE = window.location.hostname.includes("ihc-portal-1")
+    ? "https://ihc-portal-1.onrender.com"
+    : "https://ihc-portal.onrender.com";
 
   const showMessage = (message, isError = true) => {
-    const msgDiv = document.createElement("div");
     msgDiv.className = `message ${isError ? "error" : "success"}`;
     msgDiv.textContent = message;
-    document.body.appendChild(msgDiv);
-    setTimeout(() => msgDiv.remove(), 3000);
   };
+
+  const setLoading = (loading) => {
+    if (loading) {
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = `Logging in <span class="spinner"></span>`;
+    } else {
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
+    }
+  };
+
+  // Caps Lock detection
+  passwordInput.addEventListener("keyup", (e) => {
+    if (e.getModifierState && e.getModifierState("CapsLock")) {
+      capsWarning.style.display = "block";
+    } else {
+      capsWarning.style.display = "none";
+    }
+  });
 
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -23,7 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
+      setLoading(true);
       console.log("Login: Sending POST /api/auth/login", { email });
+
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,14 +64,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      // Store only in sessionStorage
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("userId", data.userId);
       sessionStorage.setItem("fullName", data.fullName);
       sessionStorage.setItem("email", email);
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userId", data.userId);
-      localStorage.setItem("fullName", data.fullName);
-      localStorage.setItem("email", email);
 
       console.log("Login: Stored session data", {
         token: data.token.slice(0, 10) + "...",
@@ -55,9 +78,13 @@ document.addEventListener("DOMContentLoaded", () => {
         domain: window.location.hostname,
       });
 
+      // Verify user
       const meRes = await fetch(`${API_BASE}/api/auth/me`, {
         method: "GET",
-        headers: { Authorization: `Bearer ${data.token}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (!meRes.ok) {
@@ -79,6 +106,15 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Login: Error", { error: err.message });
       showMessage("Error connecting to server. Please try again later.");
+    } finally {
+      setLoading(false);
     }
+  });
+
+  // Toggle password visibility
+  togglePasswordBtn.addEventListener("click", () => {
+    const type = passwordInput.type === "password" ? "text" : "password";
+    passwordInput.type = type;
+    togglePasswordBtn.textContent = type === "password" ? "Show" : "Hide";
   });
 });
