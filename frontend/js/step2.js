@@ -22,10 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const handleExpired = () => {
     sessionStorage.clear();
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("fullName");
-    localStorage.removeItem("email");
+    localStorage.clear();
     showMessage("Session expired. Please login.");
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
@@ -101,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
         li.classList.add("booking-item");
         li.innerHTML = `
           <div>
-            <p><strong>ID:</strong> ${sanitize(b.bookingId)}</p>
+            <p><strong>Code:</strong> ${sanitize(b.bookingId)}</p>
             <p><strong>Appointment:</strong> ${sanitize(b.bookingDate)} at ${sanitize(b.timeSlot)}</p>
             <p><strong>Status:</strong> ${sanitize(b.bookingStatus)}</p>
             <p><strong>Payment:</strong> ${sanitize(b.paymentStatus)}</p>
@@ -116,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
           delBtn.addEventListener("click", async () => {
             if (!confirm("Are you sure you want to delete this booking?")) return;
             try {
-              const delRes = await fetch(`${API_BASE}/api/booking/${b.bookingId}`, {
+              const delRes = await fetch(`${API_BASE}/api/booking/${b._id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
               });
@@ -124,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
               if (!delRes.ok) {
                 const errData = await delRes.json().catch(() => ({}));
-                return showMessage(errData.error || "Error deleting booking.");
+                return showMessage(errData.error || `Error deleting booking (status ${delRes.status}).`);
               }
 
               showMessage("Booking deleted!", false);
