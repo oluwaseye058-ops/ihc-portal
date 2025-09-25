@@ -53,17 +53,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const loginData = await loginRes.json();
-      if (!loginData.token || !loginData.userId || !loginData.fullName) {
+      console.log("Login: Login response", {
+        success: loginData.success,
+        token: loginData.token ? loginData.token.slice(0, 10) + "..." : "undefined",
+        userId: loginData.userId,
+        fullName: loginData.fullName,
+      });
+
+      if (!loginData.success || !loginData.token || !loginData.userId || !loginData.fullName) {
         console.error("Login: Invalid response", { response: loginData });
-        showMessage("Invalid response from server.");
+        showMessage("Invalid response from server: Missing token or user data.");
+        return;
+      }
+
+      // Validate token format (basic check for JWT-like string)
+      if (typeof loginData.token !== "string" || !loginData.token.includes(".")) {
+        console.error("Login: Invalid token format", { token: loginData.token });
+        showMessage("Invalid token received from server.");
         return;
       }
 
       console.log("Login: Token received", { token: loginData.token.slice(0, 10) + "..." });
 
       // Verify token with GET /api/auth/me
+      const headers = {
+        Authorization: `Bearer ${loginData.token}`,
+        "Content-Type": "application/json",
+      };
+      console.log("Login: Sending GET /api/auth/me", { headers });
+
       const meRes = await fetch(`${API_BASE}/me`, {
-        headers: { Authorization: `Bearer ${loginData.token}`, "Content-Type": "application/json" },
+        headers,
       });
 
       if (!meRes.ok) {
@@ -72,16 +92,17 @@ document.addEventListener("DOMContentLoaded", () => {
           endpoint: `${API_BASE}/me`,
           status: meRes.status,
           error: data.error,
+          headers,
         });
         showMessage(data.error || `Failed to verify user: ${meRes.status}`);
-        return; // Stop here; do not store token or redirect
+        return;
       }
 
       const meData = await meRes.json();
       if (!meData.user || !meData.user.email) {
         console.error("Login: Invalid user data", { response: meData });
         showMessage("Invalid user data.");
-        return; // Stop here
+        return;
       }
 
       // Store verified data
