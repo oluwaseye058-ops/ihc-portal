@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => msgDiv.remove(), 5000);
   };
 
-  const sanitize = (input) => input.replace(/[<>"'%;()&]/g, "");
+  const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
 
   const userId = sessionStorage.getItem("userId");
   const token = sessionStorage.getItem("token");
@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let bookingData = null;
 
+  // Fetch booking details
   const fetchBooking = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/booking/${userId}`, {
@@ -39,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || `HTTP ${res.status}`);
       }
-
       const data = await res.json();
       bookingData = data.bookings.find((b) => b.bookingId === selectedBookingId);
       if (!bookingData) {
@@ -55,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // Render booking summary
   const renderBookingSummary = () => {
     if (!bookingData) return;
     bookingSummaryEl.innerHTML = `
@@ -71,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   };
 
+  // Update UI for invoice and IHC code
   const updateUI = () => {
     if (!bookingData) return;
 
@@ -93,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // Handle payment form submission
   paymentForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const method = paymentMethodEl.value;
@@ -119,13 +122,13 @@ document.addEventListener("DOMContentLoaded", () => {
         bookingData.paymentStatus = "pending";
         sessionStorage.setItem("booking", JSON.stringify(bookingData));
 
-        // ✅ New message for candidate
+        // Notify candidate and redirect
         showMessage(
           "Booking completed! Please check your email for confirmation. You will be redirected to your portal.",
           false
         );
 
-        setTimeout(() => window.location.href = "step2.html", 2000); // redirect after 2s
+        setTimeout(() => window.location.href = "step2.html", 2000);
       } else {
         showMessage(`Failed to submit payment method: ${result.message || "Unknown error"}`);
       }
@@ -135,6 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Initialize
   const init = async () => {
     const booking = await fetchBooking();
     if (booking) {

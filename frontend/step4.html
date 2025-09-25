@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="IHC Payment / Invoice Request for NPRA Bahrain">
+  <meta name="keywords" content="IHC, NPRA, Bahrain, payment, invoice">
   <title>IHC Payment / Invoice Request</title>
-  <link rel="stylesheet" href="css/style.css"> <!-- fixed CSS path -->
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <main>
+    <!-- Logo -->
     <div class="logo-container">
       <img src="images/npra-logo.png" alt="NPRA Logo" style="max-width:100%;height:auto;">
     </div>
 
-    <nav class="progress-container">
+    <!-- Progress navigation -->
+    <nav class="progress-container" role="navigation">
       <a href="step1.html" class="progress-step" data-step="1">Register</a>
       <a href="step2.html" class="progress-step" data-step="2">Portal</a>
       <a href="step3.html" class="progress-step" data-step="3">Booking</a>
@@ -22,9 +26,11 @@
 
     <h2>Payment / Invoice Request</h2>
 
-    <div id="bookingSummary"></div>
+    <!-- Booking summary -->
+    <section id="bookingSummary" class="booking-summary"></section>
 
-    <form id="paymentForm">
+    <!-- Payment method form -->
+    <form id="paymentForm" class="form-container">
       <label for="paymentMethod">Select Payment Method</label>
       <select id="paymentMethod" name="paymentMethod" required>
         <option value="">-- Select --</option>
@@ -36,13 +42,15 @@
       <button type="submit" class="btn">Submit Payment Preference</button>
     </form>
 
-    <div id="invoiceContainer" style="display:none;">
+    <!-- Invoice section -->
+    <div id="invoiceContainer" style="display:none;" class="invoice-section">
       <h3>Your Invoice</h3>
       <p>Invoice is available after staff approves your booking.</p>
       <a id="invoiceLink" href="#" target="_blank" class="btn">Download Invoice</a>
     </div>
 
-    <div id="ihcCodeContainer" style="display:none;">
+    <!-- IHC Code -->
+    <div id="ihcCodeContainer" style="display:none;" class="ihc-code-section">
       <h3>Your IHC Code</h3>
       <p id="ihcCode"></p>
     </div>
