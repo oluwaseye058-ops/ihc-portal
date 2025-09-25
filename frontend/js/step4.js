@@ -6,15 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const invoiceLink = document.getElementById("invoiceLink");
   const ihcCodeContainer = document.getElementById("ihcCodeContainer");
   const ihcCodeEl = document.getElementById("ihcCode");
+  const messagesContainer = document.getElementById("messages");
   const API_BASE = "https://ihc-portal.onrender.com";
-
-  const showMessage = (message, isError = true) => {
-    const msgDiv = document.createElement("div");
-    msgDiv.className = `message ${isError ? "error" : "success"}`;
-    msgDiv.textContent = message;
-    document.body.appendChild(msgDiv);
-    setTimeout(() => msgDiv.remove(), 5000);
-  };
 
   const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
 
@@ -30,7 +23,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let bookingData = null;
 
+  // ----------------------------
+  // Show messages in #messages container
+  // ----------------------------
+  function showMessage(message, isError = true) {
+    if (!messagesContainer) return;
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `message ${isError ? "error" : "success"}`;
+    msgDiv.textContent = message;
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "close-btn";
+    closeBtn.innerHTML = "&times;";
+    closeBtn.addEventListener("click", () => msgDiv.remove());
+    msgDiv.appendChild(closeBtn);
+
+    messagesContainer.appendChild(msgDiv);
+    setTimeout(() => msgDiv.remove(), 5000);
+  }
+
+  // ----------------------------
   // Fetch booking details
+  // ----------------------------
   const fetchBooking = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/booking/${userId}`, {
@@ -41,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(data.message || `HTTP ${res.status}`);
       }
       const data = await res.json();
+      if (!Array.isArray(data.bookings)) throw new Error("Invalid booking data.");
       bookingData = data.bookings.find((b) => b.bookingId === selectedBookingId);
       if (!bookingData) {
         showMessage("Selected booking not found.");
@@ -55,11 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // ----------------------------
   // Render booking summary
+  // ----------------------------
   const renderBookingSummary = () => {
     if (!bookingData) return;
+    const name = [bookingData.firstName, bookingData.middleName, bookingData.lastName].filter(Boolean).join(" ");
     bookingSummaryEl.innerHTML = `
-      <p><strong>Name:</strong> ${sanitize(bookingData.firstName || '')} ${sanitize(bookingData.middleName || '')} ${sanitize(bookingData.lastName || '')}</p>
+      <p><strong>Name:</strong> ${sanitize(name)}</p>
       <p><strong>Passport:</strong> ${sanitize(bookingData.passportNumber || 'N/A')}</p>
       <p><strong>Nationality:</strong> ${sanitize(bookingData.nationality || 'N/A')}</p>
       <p><strong>Date of Birth:</strong> ${sanitize(bookingData.dob || 'N/A')}</p>
@@ -72,11 +90,12 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   };
 
+  // ----------------------------
   // Update UI for invoice and IHC code
+  // ----------------------------
   const updateUI = () => {
     if (!bookingData) return;
 
-    // Show invoice if approved
     if (bookingData.bookingStatus === "approved" && bookingData.invoiceUrl) {
       invoiceContainer.style.display = "block";
       invoiceLink.href = sanitize(bookingData.invoiceUrl);
@@ -84,18 +103,19 @@ document.addEventListener("DOMContentLoaded", () => {
       invoiceContainer.style.display = "none";
     }
 
-    // Show IHC code if payment confirmed
     if (bookingData.paymentStatus === "confirmed" && bookingData.ihcCode) {
       ihcCodeContainer.style.display = "block";
       ihcCodeEl.textContent = sanitize(bookingData.ihcCode);
       paymentForm.style.display = "none";
     } else {
       ihcCodeContainer.style.display = "none";
-      paymentForm.style.display = "block";
+      paymentForm.style.display = "flex";
     }
   };
 
+  // ----------------------------
   // Handle payment form submission
+  // ----------------------------
   paymentForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const method = paymentMethodEl.value;
@@ -104,6 +124,13 @@ document.addEventListener("DOMContentLoaded", () => {
       showMessage("Please select a valid payment method.");
       return;
     }
+
+    // Disable button and show spinner
+    const submitBtn = paymentForm.querySelector("button[type='submit']");
+    submitBtn.disabled = true;
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    submitBtn.appendChild(spinner);
 
     try {
       const res = await fetch(`${API_BASE}/api/booking/${userId}/paymentMethod`, {
@@ -122,23 +149,23 @@ document.addEventListener("DOMContentLoaded", () => {
         bookingData.paymentStatus = "pending";
         sessionStorage.setItem("booking", JSON.stringify(bookingData));
 
-        // Notify candidate and redirect
-        showMessage(
-          "Booking completed! Please check your email for confirmation. You will be redirected to your portal.",
-          false
-        );
-
-        setTimeout(() => window.location.href = "step2.html", 2000);
+        showMessage("Payment preference submitted! Waiting for staff approval...", false);
+        updateUI();
       } else {
         showMessage(`Failed to submit payment method: ${result.message || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Error submitting payment method:", err);
       showMessage("Error submitting payment method. Try again later.");
+    } finally {
+      submitBtn.disabled = false;
+      spinner.remove();
     }
   });
 
+  // ----------------------------
   // Initialize
+  // ----------------------------
   const init = async () => {
     const booking = await fetchBooking();
     if (booking) {
@@ -146,5 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
       updateUI();
     }
   };
+
   init();
 });

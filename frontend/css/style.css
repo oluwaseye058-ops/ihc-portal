@@ -429,3 +429,46 @@ footer {
   margin: 20px 0;
 }
 
+/* Step 4 Payment Form Layout */
+#paymentForm.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+#paymentForm label {
+  flex-basis: 100%;
+}
+
+#paymentForm select {
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+
+#paymentForm button {
+  flex-shrink: 0;
+}
+
+/* Messages container improvements */
+#messages {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Spinner is already defined in your CSS */
+
+/* Responsive for mobile */
+@media (max-width: 480px) {
+  #paymentForm.action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #paymentForm select,
+  #paymentForm button {
+    width: 100%;
+  }
+}
