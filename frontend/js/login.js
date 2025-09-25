@@ -4,10 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordInput = document.getElementById("password");
   const loginBtn = document.getElementById("loginBtn");
   const msgDiv = document.getElementById("message");
-  const togglePasswordBtn = document.getElementById("togglePassword");
-  const capsWarning = document.getElementById("capsWarning");
 
-  // Auto-select correct backend
+  // Dynamic backend selection
   const API_BASE = window.location.hostname.includes("ihc-portal-1")
     ? "https://ihc-portal-1.onrender.com"
     : "https://ihc-portal.onrender.com";
@@ -26,15 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
       loginBtn.textContent = "Login";
     }
   };
-
-  // Caps Lock detection
-  passwordInput.addEventListener("keyup", (e) => {
-    if (e.getModifierState && e.getModifierState("CapsLock")) {
-      capsWarning.style.display = "block";
-    } else {
-      capsWarning.style.display = "none";
-    }
-  });
 
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -109,12 +98,5 @@ document.addEventListener("DOMContentLoaded", () => {
     } finally {
       setLoading(false);
     }
-  });
-
-  // Toggle password visibility
-  togglePasswordBtn.addEventListener("click", () => {
-    const type = passwordInput.type === "password" ? "text" : "password";
-    passwordInput.type = type;
-    togglePasswordBtn.textContent = type === "password" ? "Show" : "Hide";
   });
 });
