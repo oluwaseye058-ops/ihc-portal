@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const sanitize = (input) => input.replace(/[<>"'%;()&]/g, "");
 
+  // === Form submission ===
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -55,7 +56,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const regResponse = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName: [firstName, middleName, lastName].filter(Boolean).join(" "), email, password }),
+        body: JSON.stringify({
+          fullName: [firstName, middleName, lastName].filter(Boolean).join(" "),
+          email,
+          password,
+        }),
       });
 
       if (!regResponse.ok) {
@@ -103,4 +108,36 @@ document.addEventListener("DOMContentLoaded", () => {
       submitButton.textContent = "Register";
     }
   });
+
+  // === Password toggle logic ===
+  const togglePassword = document.getElementById("togglePassword");
+  const passwordInput = document.getElementById("password");
+  const eyeIconPassword = document.getElementById("eyeIconPassword");
+
+  const toggleConfirmPassword = document.getElementById("toggleConfirmPassword");
+  const confirmPasswordInput = document.getElementById("confirmPassword");
+  const eyeIconConfirm = document.getElementById("eyeIconConfirm");
+
+  function toggleVisibility(input, icon) {
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    icon.innerHTML = isPassword
+      ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.956 9.956 0 012.242-3.642m3.124-2.1A9.953 9.953 0 0112 5c4.477 0 8.268 2.943 9.542 7a9.956 9.956 0 01-4.035 5.225M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>`
+      : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+           d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+           d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+  }
+
+  if (togglePassword) {
+    togglePassword.addEventListener("click", () =>
+      toggleVisibility(passwordInput, eyeIconPassword)
+    );
+  }
+
+  if (toggleConfirmPassword) {
+    toggleConfirmPassword.addEventListener("click", () =>
+      toggleVisibility(confirmPasswordInput, eyeIconConfirm)
+    );
+  }
 });
