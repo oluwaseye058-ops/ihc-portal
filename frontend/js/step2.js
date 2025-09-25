@@ -34,7 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (typeof token !== "string" || !token.includes(".") || token.trim() === "") {
-    console.error("Step2: Invalid token format", { token: token ? token.slice(0, 10) + "..." : "undefined" });
+    console.error("Step2: Invalid token format", {
+      token: token ? token.slice(0, 10) + "..." : "undefined",
+    });
     showMessage("Invalid session token. Please login again.");
     sessionStorage.clear();
     localStorage.removeItem("token");
@@ -81,6 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = "step3.html";
   });
 
+  // ✅ Improved fetchUserData
   const fetchUserData = async () => {
     try {
       const authHeader = `Bearer ${token}`;
@@ -94,23 +97,24 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { Authorization: authHeader, "Content-Type": "application/json" },
       });
 
+      if (statusRes.status === 401) {
+        console.warn("Step2: Session expired (401). Redirecting to login.");
+        showMessage("Your session has expired. Please login again.");
+        sessionStorage.clear();
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
+        setTimeout(() => (window.location.href = "login.html"), 1000);
+        return;
+      }
+
       if (!statusRes.ok) {
-        const data = await statusRes.json();
-        console.error("Step2: Fetch user data failed", {
-          endpoint: `${API_BASE}/api/auth/me`,
+        const data = await statusRes.json().catch(() => ({}));
+        console.error("Step2: Non-401 error fetching user data", {
           status: statusRes.status,
-          error: data.error || data.message,
-          sentHeaders: { Authorization: authHeader.slice(0, 16) + "..." },
+          error: data.error || data.message || "Unknown error",
         });
-        if (statusRes.status === 401) {
-          showMessage("Your session has expired. Please login again.");
-          sessionStorage.clear();
-          localStorage.removeItem("token");
-          localStorage.removeItem("userId");
-          setTimeout(() => (window.location.href = "login.html"), 1000);
-          return;
-        }
-        throw new Error(data.error || data.message || `HTTP ${statusRes.status}`);
+        showMessage("Could not load user info. Please try again later.");
+        return;
       }
 
       const { user } = await statusRes.json();
@@ -133,21 +137,19 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("email", sanitize(user.email));
       startBtn.disabled = false;
     } catch (err) {
-      console.error("Step2: Error fetching user data:", {
-        endpoint: `${API_BASE}/api/auth/me`,
-        error: err.message,
-      });
+      console.error("Step2: Error fetching user data:", err.message);
       showMessage("Error connecting to server. Please try again later.");
     }
   };
 
+  // ✅ Improved fetchBookings
   const fetchBookings = async () => {
     try {
       const authHeader = `Bearer ${token}`;
       const bookingEndpoint = `${API_BASE}/api/booking/${userId}`;
       console.log("Step2: Sending GET /api/booking/:userId", {
         endpoint: bookingEndpoint,
-        headers: { Authorization: authHeader },
+        headers: { Authorization: authHeader.slice(0, 16) + "..." },
         domain: window.location.hostname,
       });
 
@@ -156,30 +158,32 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { Authorization: authHeader, "Content-Type": "application/json" },
       });
 
+      if (bookingRes.status === 401) {
+        console.warn("Step2: Session expired (401). Redirecting to login.");
+        showMessage("Your session has expired. Please login again.");
+        sessionStorage.clear();
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
+        setTimeout(() => (window.location.href = "login.html"), 1000);
+        return;
+      }
+
       if (!bookingRes.ok) {
-        const data = await bookingRes.json();
-        console.error("Step2: Fetch bookings failed", {
-          endpoint: bookingEndpoint,
+        const data = await bookingRes.json().catch(() => ({}));
+        console.error("Step2: Non-401 error fetching bookings", {
           status: bookingRes.status,
-          error: data.error || data.message || "No error message provided",
-          sentHeaders: { Authorization: authHeader },
+          error: data.error || data.message || "Unknown error",
         });
-        if (bookingRes.status === 401) {
-          showMessage("Your session has expired. Please login again.");
-          sessionStorage.clear();
-          localStorage.removeItem("token");
-          localStorage.removeItem("userId");
-          setTimeout(() => (window.location.href = "login.html"), 1000);
-          return;
-        }
-        throw new Error(data.error || data.message || `HTTP ${bookingRes.status}`);
+        showMessage("Could not load bookings. Please try again later.");
+        return;
       }
 
       const bookingData = await bookingRes.json();
       console.log("Step2: Booking fetch response:", bookingData);
-      const userBookings = bookingData.bookings || [];
 
+      const userBookings = bookingData.bookings || [];
       bookingList.innerHTML = "";
+
       if (userBookings.length === 0) {
         bookingList.innerHTML = "<li>No bookings found.</li>";
         bookingStatusEl.textContent = "No bookings yet.";
@@ -211,20 +215,20 @@ document.addEventListener("DOMContentLoaded", () => {
           bookingList.appendChild(li);
         });
 
-        bookingStatusEl.textContent = latest.bookingStatus === "approved"
-          ? "Booking Approved"
-          : "Booking Approval Pending – No invoice yet";
+        bookingStatusEl.textContent =
+          latest.bookingStatus === "approved"
+            ? "Booking Approved"
+            : "Booking Approval Pending – No invoice yet";
+
         paymentStatusEl.textContent = `Payment Status: ${sanitize(latest.paymentStatus) || "pending"}`;
         ihcCodeEl.textContent = latest.ihcCode ? `IHC Code: ${sanitize(latest.ihcCode)}` : "";
-        invoiceBtn.style.display = latest.bookingStatus === "approved" && latest.invoiceUrl ? "inline-block" : "none";
+        invoiceBtn.style.display =
+          latest.bookingStatus === "approved" && latest.invoiceUrl ? "inline-block" : "none";
         invoiceBtn.onclick = () => viewInvoice(latest);
       }
     } catch (err) {
-      console.error("Step2: Error fetching bookings:", {
-        endpoint: `${API_BASE}/api/booking/${userId}`,
-        error: err.message,
-      });
-      showMessage("Error loading bookings. Server may be down.");
+      console.error("Step2: Error fetching bookings:", err.message);
+      showMessage("Error loading bookings. Please try again later.");
     }
   };
 
