@@ -121,7 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { Authorization: `Bearer ${token}` },
               });
               if (delRes.status === 401) return handleExpired();
-              if (!delRes.ok) return showMessage("Error deleting booking.");
+
+              if (!delRes.ok) {
+                const errData = await delRes.json().catch(() => ({}));
+                return showMessage(errData.error || "Error deleting booking.");
+              }
+
               showMessage("Booking deleted!", false);
               fetchBookings();
             } catch (err) {
