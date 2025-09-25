@@ -3,64 +3,59 @@ document.addEventListener("DOMContentLoaded", () => {
   const ihcCodeEl = document.getElementById("ihcCode");
   const paymentStatusEl = document.getElementById("paymentStatus");
   const startBtn = document.getElementById("startBooking");
+  const bookingList = document.getElementById("bookingList");
   const bookingStatusEl = document.getElementById("bookingStatus");
   const invoiceBtn = document.getElementById("invoiceBtn");
-  const bookingList = document.getElementById("bookingList");
-  const logoutBtn = document.getElementById("logoutBtn");
   const API_BASE = "https://ihc-portal.onrender.com";
 
-  const showMessage = (message, isError = true) => {
-    const msgDiv = document.createElement("div");
-    msgDiv.className = `message ${isError ? "error" : "success"}`;
-    msgDiv.textContent = message;
-    document.body.appendChild(msgDiv);
-    setTimeout(() => msgDiv.remove(), 3000);
+  const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
+  const showMessage = (msg, isError = true) => {
+    const div = document.createElement("div");
+    div.className = `message ${isError ? "error" : "success"}`;
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
   };
 
-  const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
+  const token =
+    sessionStorage.getItem("token") || localStorage.getItem("token");
+  const userId =
+    sessionStorage.getItem("userId") || localStorage.getItem("userId");
 
-  // ✅ Only use sessionStorage for token
-  const token = sessionStorage.getItem("token");
-  const userId = sessionStorage.getItem("userId");
-
-  if (!token || !userId) {
+  const handleExpired = () => {
+    sessionStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
     showMessage("Session expired. Please login.");
-    return setTimeout(() => (window.location.href = "login.html"), 1000);
-  }
+    setTimeout(() => (window.location.href = "login.html"), 1000);
+  };
+
+  if (!token || !userId) return handleExpired();
+
+  // Optional: Check JWT expiry
+  const parseJwt = (t) => { try { return JSON.parse(atob(t.split(".")[1])); } catch { return null; } };
+  const payload = parseJwt(token);
+  if (!payload || payload.exp * 1000 < Date.now()) return handleExpired();
 
   const logout = () => {
     sessionStorage.clear();
-    showMessage("Logged out successfully!", false);
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    showMessage("Logged out!", false);
     setTimeout(() => (window.location.href = "login.html"), 1000);
   };
 
-  if (!logoutBtn) {
-    const btn = document.createElement("button");
-    btn.textContent = "Logout";
-    btn.className = "logout-btn";
-    btn.onclick = logout;
-    welcomeEl.insertAdjacentElement("afterend", btn);
-  } else {
-    logoutBtn.onclick = logout;
-  }
+  document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
-  startBtn.addEventListener("click", () => {
-    window.location.href = "step3.html";
-  });
-
-  const handle401 = () => {
-    sessionStorage.clear();
-    showMessage("Session expired. Please login again.");
-    setTimeout(() => (window.location.href = "login.html"), 1000);
-  };
+  startBtn.addEventListener("click", () => (window.location.href = "step3.html"));
 
   const fetchUserData = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 401) return handle401();
-      if (!res.ok) return showMessage("Error fetching user info.");
+      if (res.status === 401) return handleExpired();
+      if (!res.ok) return showMessage("Error fetching user data.");
 
       const { user } = await res.json();
       welcomeEl.textContent = `Welcome ${sanitize(user.fullName)}`;
@@ -77,56 +72,26 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(`${API_BASE}/api/booking/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 401) return handle401();
+      if (res.status === 401) return handleExpired();
       if (!res.ok) return showMessage("Error loading bookings.");
 
       const data = await res.json();
-      const userBookings = data.bookings || [];
+      const bookings = data.bookings || [];
       bookingList.innerHTML = "";
+      if (!bookings.length) return (bookingList.innerHTML = "<li>No bookings</li>");
 
-      if (userBookings.length === 0) {
-        bookingList.innerHTML = "<li>No bookings found.</li>";
-        bookingStatusEl.textContent = "No bookings yet.";
-        invoiceBtn.style.display = "none";
-        return;
-      }
-
-      userBookings.forEach((b) => {
+      bookings.forEach((b) => {
         const li = document.createElement("li");
-        li.className = "booking-item";
         li.innerHTML = `
           <div>
-            <p><strong>Booking ID:</strong> ${sanitize(b.bookingId)}</p>
+            <p><strong>ID:</strong> ${sanitize(b.bookingId)}</p>
             <p><strong>Appointment:</strong> ${sanitize(b.bookingDate)} at ${sanitize(b.timeSlot)}</p>
             <p><strong>Status:</strong> ${sanitize(b.bookingStatus)}</p>
-            <p><strong>Payment Status:</strong> ${sanitize(b.paymentStatus)}</p>
-            <p><strong>IHC Code:</strong> ${sanitize(b.ihcCode) || "N/A"}</p>
+            <p><strong>Payment:</strong> ${sanitize(b.paymentStatus)}</p>
           </div>
         `;
-        if (b.bookingStatus === "approved" && b.invoiceUrl) {
-          const btn = document.createElement("button");
-          btn.className = "btn btn-small invoice-btn";
-          btn.textContent = "View Invoice";
-          btn.onclick = () => {
-            sessionStorage.setItem("selectedBookingId", sanitize(b.bookingId));
-            window.location.href = "invoice.html";
-          };
-          li.appendChild(btn);
-        }
         bookingList.appendChild(li);
       });
-
-      const latest = userBookings[userBookings.length - 1];
-      bookingStatusEl.textContent =
-        latest.bookingStatus === "approved"
-          ? "Booking Approved"
-          : "Booking Approval Pending";
-      invoiceBtn.style.display =
-        latest.bookingStatus === "approved" && latest.invoiceUrl ? "inline-block" : "none";
-      invoiceBtn.onclick = () => {
-        sessionStorage.setItem("selectedBookingId", sanitize(latest.bookingId));
-        window.location.href = "invoice.html";
-      };
     } catch (err) {
       console.error(err);
       showMessage("Error loading bookings.");
