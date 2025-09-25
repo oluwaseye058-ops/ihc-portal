@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     msgDiv.className = `message ${isError ? "error" : "success"}`;
     msgDiv.textContent = message;
     document.body.appendChild(msgDiv);
-    setTimeout(() => msgDiv.remove(), 5000);
+    setTimeout(() => msgDiv.remove(), 3000);
   };
 
   const sanitize = (input) => input.replace(/[<>"'%;()&]/g, "");
@@ -119,13 +119,12 @@ document.addEventListener("DOMContentLoaded", () => {
         bookingData.paymentStatus = "pending";
         sessionStorage.setItem("booking", JSON.stringify(bookingData));
 
-        // ✅ New message for candidate
         showMessage(
-          "Booking completed! Please check your email for confirmation. You will be redirected to your portal.",
+          "Payment method submitted! IHC staff will review and issue invoice. You will receive an email notification.",
           false
         );
 
-        setTimeout(() => window.location.href = "step2.html", 2000); // redirect after 2s
+        setTimeout(() => window.location.href = "step2.html", 1000);
       } else {
         showMessage(`Failed to submit payment method: ${result.message || "Unknown error"}`);
       }
