@@ -24,19 +24,13 @@ module.exports = function (sendBookingNotification) {
     }
   };
 
-  // Middleware for staff-only routes
+  // 🔑 Simple password check for staff-only routes
   const staffMiddleware = (req, res, next) => {
-    User.findById(req.user.id)
-      .then(user => {
-        if (!user || user.role !== "staff") {
-          return res.status(403).json({ success: false, message: "Staff access required" });
-        }
-        next();
-      })
-      .catch(err => {
-        console.error("❌ Staff auth error:", err.message);
-        res.status(500).json({ success: false, message: "Server error" });
-      });
+    const staffKey = req.headers["x-staff-key"];
+    if (!staffKey || staffKey !== process.env.STAFF_SECRET) {
+      return res.status(403).json({ success: false, message: "Forbidden: Invalid staff key" });
+    }
+    next();
   };
 
   // -----------------------
@@ -192,7 +186,7 @@ module.exports = function (sendBookingNotification) {
   // Staff confirms payment (marks paymentStatus = confirmed)
   // PUT /api/booking/:bookingId/confirmPayment
   // ------------------------------------------------------------------
-  router.put("/:bookingId/confirmPayment", authMiddleware, staffMiddleware, async (req, res) => {
+  router.put("/:bookingId/confirmPayment", staffMiddleware, async (req, res) => {
     try {
       const { bookingId } = req.params;
       const booking = await Booking.findOne({ bookingId });
@@ -225,7 +219,7 @@ module.exports = function (sendBookingNotification) {
   // Staff uploads invoice URL; marks booking approved and notifies candidate
   // PUT /api/booking/:bookingId/invoice
   // ------------------------------------------------------------------
-  router.put("/:bookingId/invoice", authMiddleware, staffMiddleware, async (req, res) => {
+  router.put("/:bookingId/invoice", staffMiddleware, async (req, res) => {
     try {
       const { bookingId } = req.params;
       const { invoiceUrl } = req.body;
@@ -316,7 +310,7 @@ module.exports = function (sendBookingNotification) {
   // Staff: list all bookings (staff-only)
   // GET /api/staff/bookings
   // ------------------------------------------------------------------
-  router.get("/staff/bookings", authMiddleware, staffMiddleware, async (req, res) => {
+  router.get("/staff/bookings", staffMiddleware, async (req, res) => {
     try {
       const bookings = await Booking.find().sort({ createdAt: -1 }).lean();
       res.json({ success: true, bookings });
@@ -328,5 +322,3 @@ module.exports = function (sendBookingNotification) {
 
   return router;
 };
-
-//lets get//

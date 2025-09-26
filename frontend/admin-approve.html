@@ -9,10 +9,10 @@
   <main>
     <h2>Approve Booking</h2>
     <form id="approveForm">
-      <label for="bookingId">Booking ID:</label>
+      <label>Booking ID:</label>
       <input type="text" id="bookingId" required>
 
-      <label for="invoiceUrl">Invoice URL:</label>
+      <label>Invoice URL:</label>
       <input type="url" id="invoiceUrl" required>
 
       <button type="submit">Approve & Save</button>
@@ -23,30 +23,36 @@
   <script>
     document.getElementById("approveForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const bookingId = document.getElementById("bookingId").value.trim();
       const invoiceUrl = document.getElementById("invoiceUrl").value.trim();
       const messageEl = document.getElementById("message");
+
+      // Ask staff for the secret password
+      const staffSecret = prompt("Enter Staff Secret Password:");
+      if (!staffSecret) {
+        messageEl.innerHTML = "<p style='color:red;'>Approval cancelled: No password entered.</p>";
+        return;
+      }
 
       try {
         const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${bookingId}/invoice`, {
           method: "PUT",
           headers: { 
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("token") || ""}` // staff login token
+            "x-staff-key": staffSecret // 🔑 send secret from prompt
           },
           body: JSON.stringify({ invoiceUrl }),
         });
 
         const data = await res.json();
         if (data.success) {
-          messageEl.innerHTML = "<p style='color:green;'>✅ Booking approved and invoice saved!</p>";
+          messageEl.innerHTML = "<p style='color:green;'>Booking approved successfully!</p>";
         } else {
-          messageEl.innerHTML = `<p style='color:red;'>❌ ${data.message || "Failed to approve booking"}</p>`;
+          messageEl.innerHTML = `<p style='color:red;'>${data.message || "Failed to approve booking"}</p>`;
         }
       } catch (err) {
-        console.error("❌ Error:", err);
-        document.getElementById("message").innerHTML = "<p style='color:red;'>Server error</p>";
+        console.error(err);
+        messageEl.innerHTML = "<p style='color:red;'>Server error</p>";
       }
     });
   </script>
