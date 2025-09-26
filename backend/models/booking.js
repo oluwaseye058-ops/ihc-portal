@@ -21,7 +21,7 @@ const bookingSchema = new mongoose.Schema(
     paymentMethod: { type: String },
     paymentStatus: { type: String, default: "pending" },
     ihcCode: { type: String },
-    invoiceUrl: { type: String }, // staff can add later
+    invoiceUrl: { type: String, default: "" },
   },
   { timestamps: true }
 );
