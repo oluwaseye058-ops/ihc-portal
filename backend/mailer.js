@@ -1,5 +1,6 @@
 // backend/mailer.js
-const SibApiV3Sdk = require("sib-api-v3-sdk");
+const SibApiV3Sdk = require("@getbrevo/brevo");
+
 
 // ✅ Load .env locally (Render injects them automatically in production)
 if (process.env.NODE_ENV !== "production") {
