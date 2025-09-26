@@ -26,4 +26,6 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+//lets get//
+
 module.exports = mongoose.model("Booking", bookingSchema);
