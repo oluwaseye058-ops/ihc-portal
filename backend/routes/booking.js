@@ -187,6 +187,12 @@ module.exports = function (sendBookingNotification) {
   // PUT /api/booking/:bookingId/confirmPayment
   // ------------------------------------------------------------------
   router.put("/:bookingId/confirmPayment", staffMiddleware, async (req, res) => {
+    
+    console.log("x-staff-key:", req.headers["x-staff-key"]);
+console.log("bookingId from request:", req.params.bookingId);
+console.log("invoiceUrl from request:", req.body.invoiceUrl);
+
+    
     try {
       const { bookingId } = req.params;
       const booking = await Booking.findOne({ bookingId });
