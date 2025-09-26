@@ -15,6 +15,9 @@
       <label>Invoice URL:</label>
       <input type="url" id="invoiceUrl" required>
 
+      <label>Staff Secret:</label>
+      <input type="password" id="staffSecret" required>
+
       <button type="submit">Approve & Save</button>
     </form>
     <div id="message"></div>
@@ -23,14 +26,14 @@
   <script>
     document.getElementById("approveForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+
       const bookingId = document.getElementById("bookingId").value.trim();
       const invoiceUrl = document.getElementById("invoiceUrl").value.trim();
+      const staffSecret = document.getElementById("staffSecret").value.trim();
       const messageEl = document.getElementById("message");
 
-      // Ask staff for the secret password
-      const staffSecret = prompt("Enter Staff Secret Password:");
       if (!staffSecret) {
-        messageEl.innerHTML = "<p style='color:red;'>Approval cancelled: No password entered.</p>";
+        messageEl.innerHTML = "<p style='color:red;'>Please enter the staff secret.</p>";
         return;
       }
 
@@ -39,12 +42,13 @@
           method: "PUT",
           headers: { 
             "Content-Type": "application/json",
-            "x-staff-key": staffSecret // 🔑 send secret from prompt
+            "x-staff-key": staffSecret
           },
           body: JSON.stringify({ invoiceUrl }),
         });
 
         const data = await res.json();
+
         if (data.success) {
           messageEl.innerHTML = "<p style='color:green;'>Booking approved successfully!</p>";
         } else {
