@@ -23,9 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let bookingData = null;
 
-  // ----------------------------
-  // Show messages in #messages container
-  // ----------------------------
   function showMessage(message, isError = true) {
     if (!messagesContainer) return;
     const msgDiv = document.createElement("div");
@@ -42,21 +39,15 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => msgDiv.remove(), 5000);
   }
 
-  // ----------------------------
-  // Fetch booking details
-  // ----------------------------
   const fetchBooking = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/booking/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || `HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error("Unable to fetch booking details");
+
       const data = await res.json();
-      if (!Array.isArray(data.bookings)) throw new Error("Invalid booking data.");
-      bookingData = data.bookings.find((b) => b.bookingId === selectedBookingId);
+      bookingData = data.bookings.find(b => b.bookingId === selectedBookingId);
       if (!bookingData) {
         showMessage("Selected booking not found.");
         setTimeout(() => (window.location.href = "step2.html"), 1000);
@@ -70,9 +61,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // ----------------------------
-  // Render booking summary
-  // ----------------------------
   const renderBookingSummary = () => {
     if (!bookingData) return;
     const name = [bookingData.firstName, bookingData.middleName, bookingData.lastName].filter(Boolean).join(" ");
@@ -87,12 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
       <p><strong>Appointment:</strong> ${sanitize(bookingData.bookingDate || 'N/A')} at ${sanitize(bookingData.timeSlot || 'N/A')}</p>
       <p><strong>Status:</strong> ${sanitize(bookingData.bookingStatus || 'N/A')}</p>
       <p><strong>Payment Status:</strong> ${sanitize(bookingData.paymentStatus || 'pending')}</p>
+      ${bookingData.paymentMethod ? `<p><strong>Selected Payment:</strong> ${sanitize(bookingData.paymentMethod)}</p>` : ""}
     `;
   };
 
-  // ----------------------------
-  // Update UI for invoice and IHC code
-  // ----------------------------
   const updateUI = () => {
     if (!bookingData) return;
 
@@ -110,12 +96,16 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       ihcCodeContainer.style.display = "none";
       paymentForm.style.display = "flex";
+
+      // If payment method already submitted, disable select & button
+      if (bookingData.paymentMethod) {
+        paymentMethodEl.value = bookingData.paymentMethod;
+        paymentMethodEl.disabled = true;
+        paymentForm.querySelector("button[type='submit']").disabled = true;
+      }
     }
   };
 
-  // ----------------------------
-  // Handle payment form submission
-  // ----------------------------
   paymentForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const method = paymentMethodEl.value;
@@ -125,7 +115,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Disable button and show spinner
     const submitBtn = paymentForm.querySelector("button[type='submit']");
     submitBtn.disabled = true;
     const spinner = document.createElement("span");
@@ -149,23 +138,21 @@ document.addEventListener("DOMContentLoaded", () => {
         bookingData.paymentStatus = "pending";
         sessionStorage.setItem("booking", JSON.stringify(bookingData));
 
-        showMessage("Payment preference submitted! Waiting for staff approval...", false);
-        updateUI();
+        showMessage("Payment preference submitted! You will be redirected to your portal.", false);
+        setTimeout(() => window.location.href = "step2.html", 1500);
       } else {
         showMessage(`Failed to submit payment method: ${result.message || "Unknown error"}`);
+        submitBtn.disabled = false;
+        spinner.remove();
       }
     } catch (err) {
-      console.error("Error submitting payment method:", err);
+      console.error(err);
       showMessage("Error submitting payment method. Try again later.");
-    } finally {
       submitBtn.disabled = false;
       spinner.remove();
     }
   });
 
-  // ----------------------------
-  // Initialize
-  // ----------------------------
   const init = async () => {
     const booking = await fetchBooking();
     if (booking) {
@@ -173,6 +160,5 @@ document.addEventListener("DOMContentLoaded", () => {
       updateUI();
     }
   };
-
   init();
 });

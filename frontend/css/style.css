@@ -472,3 +472,20 @@ footer {
     width: 100%;
   }
 }
+
+/* Booking Selected Payment Styling */
+.booking-item p.payment-method {
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+/* Payment submitted */
+.booking-item p.payment-method.submitted {
+  color: #155724; /* dark green */
+}
+
+/* Payment not selected yet */
+.booking-item p.payment-method.pending {
+  color: #6c757d; /* gray */
+  font-style: italic;
+}

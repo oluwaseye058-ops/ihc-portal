@@ -6,15 +6,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const bookingList = document.getElementById("bookingList");
   const invoiceBtn = document.getElementById("invoiceBtn");
   const logoutBtn = document.getElementById("logoutBtn");
+  const messagesContainer = document.getElementById("messages");
   const API_BASE = "https://ihc-portal.onrender.com";
 
   const sanitize = (input) => input?.toString().replace(/[<>"'%;()&]/g, "") || "";
 
   const showMessage = (msg, isError = true) => {
+    if (!messagesContainer) return;
     const div = document.createElement("div");
     div.className = `message ${isError ? "error" : "success"}`;
     div.textContent = msg;
-    document.body.appendChild(div);
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "close-btn";
+    closeBtn.innerHTML = "&times;";
+    closeBtn.addEventListener("click", () => div.remove());
+    div.appendChild(closeBtn);
+
+    messagesContainer.appendChild(div);
     setTimeout(() => div.remove(), 3000);
   };
 
@@ -84,29 +93,32 @@ document.addEventListener("DOMContentLoaded", () => {
       bookings.forEach((b) => {
         const li = document.createElement("li");
         li.classList.add("booking-item");
+
+        const selectedPayment = b.paymentMethod ? sanitize(b.paymentMethod) : "Not Selected";
+        const paymentClass = b.paymentMethod ? "submitted" : "pending";
+
         li.innerHTML = `
           <div>
             <p><strong>Code:</strong> ${sanitize(b.bookingId)}</p>
             <p><strong>Appointment:</strong> ${sanitize(b.bookingDate)} at ${sanitize(b.timeSlot)}</p>
             <p><strong>Status:</strong> ${sanitize(b.bookingStatus)}</p>
-            <p><strong>Payment:</strong> ${sanitize(b.paymentStatus)}</p>
+            <p><strong>Payment Status:</strong> ${sanitize(b.paymentStatus)}</p>
+            <p class="payment-method ${paymentClass}"><strong>Selected Payment:</strong> ${selectedPayment}</p>
           </div>
         `;
 
-        // Clicking anywhere on the booking redirects to step4
         li.style.cursor = "pointer";
         li.addEventListener("click", () => {
           sessionStorage.setItem("selectedBookingId", sanitize(b.bookingId));
           window.location.href = "step4.html";
         });
 
-        // If booking not approved -> allow delete
         if (b.bookingStatus !== "approved") {
           const delBtn = document.createElement("button");
           delBtn.textContent = "Delete";
           delBtn.className = "btn btn-small logout-btn";
           delBtn.addEventListener("click", async (e) => {
-            e.stopPropagation(); // prevent redirect
+            e.stopPropagation();
             if (!confirm("Are you sure you want to delete this booking?")) return;
             try {
               const delRes = await fetch(`${API_BASE}/api/booking/${b._id}`, {
@@ -114,12 +126,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { Authorization: `Bearer ${token}` },
               });
               if (delRes.status === 401) return handleExpired();
-
               if (!delRes.ok) {
                 const errData = await delRes.json().catch(() => ({}));
                 return showMessage(errData.error || `Error deleting booking (status ${delRes.status}).`);
               }
-
               showMessage("Booking deleted!", false);
               fetchBookings();
             } catch (err) {
@@ -130,11 +140,10 @@ document.addEventListener("DOMContentLoaded", () => {
           li.appendChild(delBtn);
         }
 
-        // If booking approved and invoice exists -> show invoice button
         if (b.bookingStatus === "approved" && b.invoiceUrl) {
           invoiceBtn.style.display = "inline-block";
           invoiceBtn.onclick = (e) => {
-            e.stopPropagation(); // prevent step4 redirect
+            e.stopPropagation();
             window.open(sanitize(b.invoiceUrl), "_blank");
           };
         }
