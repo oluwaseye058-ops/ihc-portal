@@ -15,7 +15,7 @@ const app = express();
 // ✅ CORS — relaxed for now so frontend can connect
 app.use(cors({
   origin: "*",
-  allowedHeaders: ["Content-Type", "Authorization", "x-staff-key"],
+  allowedHeaders: ["Content-Type", "authorization", "x-staff-key"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 }));
 

@@ -26,6 +26,7 @@ module.exports = function (sendBookingNotification) {
 
   // 🔑 Simple password check for staff-only routes
   const staffMiddleware = (req, res, next) => {
+    console.log("x-staff-key received:", req.headers["x-staff-key"]);
     const staffKey = req.headers["x-staff-key"];
     if (!staffKey || staffKey !== process.env.STAFF_SECRET) {
       return res.status(403).json({ success: false, message: "Forbidden: Invalid staff key" });
