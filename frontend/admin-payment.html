@@ -30,21 +30,30 @@
         return;
       }
 
+      // Ask staff for secret
+      const staffSecret = prompt("Enter Staff Secret Password:");
+      if (!staffSecret) {
+        messageEl.innerHTML = "<p style='color:red;'>Action cancelled: No password entered.</p>";
+        return;
+      }
+
       try {
-        const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${bookingId}/confirmPayment`, {
+        const res = await fetch(`https://ihc-portal.onrender.com/api/booking/${bookingId}/markPaid`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "x-staff-key": staffSecret
+          }
         });
 
         const data = await res.json();
 
         if (data.success && data.booking) {
           const { booking } = data;
-          const ihcCode = booking.ihcCode || "Not generated";
           messageEl.innerHTML = `
             <p style="color:green;">✅ Payment confirmed successfully!</p>
             <p><strong>Booking ID:</strong> ${booking.bookingId}</p>
-            <p><strong>IHC Code:</strong> ${ihcCode}</p>
+            <p><strong>IHC Code:</strong> ${booking.ihcCode}</p>
           `;
         } else {
           messageEl.innerHTML = `<p style="color:red;">❌ ${data.message || "Failed to confirm payment"}</p>`;

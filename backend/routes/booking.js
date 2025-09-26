@@ -329,5 +329,51 @@ console.log("invoiceUrl from request:", req.body.invoiceUrl);
     }
   });
 
+  // ------------------------------------------------------------------
+// Staff confirms payment, issues IHC code, and notifies candidate
+// PUT /api/booking/:bookingId/markPaid
+// ------------------------------------------------------------------
+router.put("/:bookingId/markPaid", staffMiddleware, async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await Booking.findOne({ bookingId });
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    // Mark as paid
+    booking.paymentStatus = "paid";
+
+    // Generate unique IHC code (e.g., IHC + 6 random chars)
+    const ihcCode = "IHC" + crypto.randomBytes(3).toString("hex").toUpperCase();
+    booking.ihcCode = ihcCode;
+
+    await booking.save();
+    console.log(`✅ Booking ${bookingId} marked as paid. IHC code: ${ihcCode}`);
+
+    // Notify candidate
+    try {
+      const candidateEmail = booking.email;
+      const candidateName = booking.firstName;
+      await sendBookingNotification(
+        candidateEmail,
+        "IHC Payment Confirmed & Your IHC Code",
+        `<p>Dear ${candidateName},</p>
+         <p>Your payment for booking <strong>${booking.bookingId}</strong> has been confirmed.</p>
+         <p>Your unique IHC Code is: <strong>${ihcCode}</strong></p>
+         <p>Keep this code safe. You will need it for your appointment.</p>
+         <p>Thank you,<br>IHC Team</p>`
+      );
+      console.log(`📧 IHC code email sent to ${candidateEmail}`);
+    } catch (err) {
+      console.error("❌ Failed to send IHC code email:", err.message);
+    }
+
+    res.json({ success: true, booking });
+  } catch (err) {
+    console.error("❌ Error marking booking as paid:", err.message);
+    res.status(500).json({ success: false, message: "Server error marking booking as paid" });
+  }
+});
+
+
   return router;
 };
