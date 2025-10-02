@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>IHC Portal — Staff Bookings</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding:20px; background:#f9fafb; }
+    h1 { font-size:22px; margin-bottom:16px; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; background:#fff; }
+    th, td { padding:10px; border:1px solid #e5e7eb; text-align:left; font-size:14px; }
+    th { background:#f3f4f6; font-weight:600; }
+    .badge { padding:4px 8px; border-radius:6px; font-weight:600; font-size:13px; }
+    .pending { background:#fff7ed; color:#92400e; }
+    .approved { background:#ecfdf5; color:#065f46; }
+    .paid { background:#eef2ff; color:#3730a3; }
+    .muted { color:#6b7280; font-size:13px; }
+    .card { margin-top:20px; padding:12px; border-radius:6px; background:#fff; border:1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <h1>IHC Bookings — Staff View</h1>
+
+  <div id="statusArea" class="muted">Loading bookings…</div>
+
+  <table id="bookingsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>First</th>
+        <th>Middle</th>
+        <th>Last</th>
+        <th>Passport</th>
+        <th>Nationality</th>
+        <th>DOB</th>
+        <th>Address</th>
+        <th>Sponsor Company</th>
+        <th>Sponsor Airline</th>
+        <th>Booking Date</th>
+        <th>Time Slot</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="bookingsBody"></tbody>
+  </table>
+
+  <div id="details"></div>
+
+  <script>
+    const API_BASE = "https://ihc-portal.onrender.com";
+    const BOOKINGS_ENDPOINT = API_BASE + "/api/bookings";
+    const STAFF_SECRET = "Ammsterdam7777-=$"; // replace with your secret
+
+    const statusArea = document.getElementById("statusArea");
+    const bookingsTable = document.getElementById("bookingsTable");
+    const bookingsBody = document.getElementById("bookingsBody");
+
+    function badgeClass(status) {
+      if (!status) return "badge pending";
+      status = status.toLowerCase();
+      if (status.includes("approved")) return "badge approved";
+      if (status.includes("paid")) return "badge paid";
+      return "badge pending";
+    }
+
+    function escapeHtml(s) {
+      if (!s) return "";
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function renderBookings(bookings) {
+      bookingsBody.innerHTML = "";
+      if (!bookings.length) {
+        statusArea.textContent = "No bookings found.";
+        bookingsTable.style.display = "none";
+        return;
+      }
+      bookingsTable.style.display = "";
+      statusArea.textContent = `Showing ${bookings.length} bookings`;
+
+      bookings.forEach(b => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(b.firstName)}</td>
+          <td>${escapeHtml(b.middleName)}</td>
+          <td>${escapeHtml(b.lastName)}</td>
+          <td>${escapeHtml(b.passportNumber)}</td>
+          <td>${escapeHtml(b.nationality)}</td>
+          <td>${escapeHtml(b.dob)}</td>
+          <td>${escapeHtml(b.address)}</td>
+          <td>${escapeHtml(b.sponsorCompany)}</td>
+          <td>${escapeHtml(b.sponsorAirline)}</td>
+          <td>${escapeHtml(b.bookingDate)}</td>
+          <td>${escapeHtml(b.timeSlot)}</td>
+          <td><span class="badge ${badgeClass(b.status)}">${escapeHtml(b.status || "Pending")}</span></td>
+        `;
+        bookingsBody.appendChild(tr);
+      });
+    }
+
+    async function fetchBookings() {
+      statusArea.textContent = "Loading…";
+      try {
+        const res = await fetch(BOOKINGS_ENDPOINT, {
+          headers: { "x-staff-secret": STAFF_SECRET }
+        });
+        if (!res.ok) {
+          statusArea.textContent = "Error fetching bookings: " + res.status;
+          return;
+        }
+        const data = await res.json();
+        const bookings = Array.isArray(data) ? data : data.bookings || [];
+        renderBookings(bookings);
+      } catch (err) {
+        statusArea.textContent = "Failed to load bookings.";
+        console.error(err);
+      }
+    }
+
+    fetchBookings();
+  </script>
+</body>
+</html>
