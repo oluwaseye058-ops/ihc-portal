@@ -7,6 +7,24 @@
   <style>
     body { font-family: system-ui, sans-serif; padding:20px; background:#f9fafb; }
     h1 { font-size:22px; margin-bottom:16px; }
+    form { margin-bottom:16px; }
+    input[type="text"] {
+      padding:8px 12px;
+      border:1px solid #d1d5db;
+      border-radius:6px;
+      font-size:14px;
+    }
+    button {
+      padding:8px 16px;
+      margin-left:8px;
+      border:none;
+      border-radius:6px;
+      background:#2563eb;
+      color:#fff;
+      font-size:14px;
+      cursor:pointer;
+    }
+    button:hover { background:#1e40af; }
     table { width:100%; border-collapse:collapse; margin-top:12px; background:#fff; }
     th, td { padding:10px; border:1px solid #e5e7eb; text-align:left; font-size:14px; }
     th { background:#f3f4f6; font-weight:600; }
@@ -15,17 +33,24 @@
     .approved { background:#ecfdf5; color:#065f46; }
     .paid { background:#eef2ff; color:#3730a3; }
     .muted { color:#6b7280; font-size:13px; }
-    .card { margin-top:20px; padding:12px; border-radius:6px; background:#fff; border:1px solid #e5e7eb; }
   </style>
 </head>
 <body>
   <h1>IHC Bookings — Staff View</h1>
+
+  <!-- Search Form -->
+  <form id="searchForm">
+    <input type="text" id="searchInput" placeholder="Enter Booking ID (e.g., BK1234AB)" />
+    <button type="submit">Search</button>
+    <button type="button" id="resetBtn">Reset</button>
+  </form>
 
   <div id="statusArea" class="muted">Loading bookings…</div>
 
   <table id="bookingsTable" style="display:none;">
     <thead>
       <tr>
+        <th>Booking ID</th>
         <th>First</th>
         <th>Middle</th>
         <th>Last</th>
@@ -43,16 +68,16 @@
     <tbody id="bookingsBody"></tbody>
   </table>
 
-  <div id="details"></div>
-
   <script>
     const API_BASE = "https://ihc-portal.onrender.com";
     const BOOKINGS_ENDPOINT = API_BASE + "/api/booking/staff/bookings";
-    const STAFF_SECRET = "Ammsterdam7777-=$"; // replace with your secret
+    const STAFF_SECRET = "Ammsterdam7777-=$"; // replace with your real secret
 
     const statusArea = document.getElementById("statusArea");
     const bookingsTable = document.getElementById("bookingsTable");
     const bookingsBody = document.getElementById("bookingsBody");
+
+    let allBookings = []; // keep all bookings in memory
 
     function badgeClass(status) {
       if (!status) return "badge pending";
@@ -78,11 +103,12 @@
         return;
       }
       bookingsTable.style.display = "";
-      statusArea.textContent = `Showing ${bookings.length} bookings`;
+      statusArea.textContent = `Showing ${bookings.length} booking(s)`;
 
       bookings.forEach(b => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
+          <td>${escapeHtml(b.bookingId)}</td>
           <td>${escapeHtml(b.firstName)}</td>
           <td>${escapeHtml(b.middleName)}</td>
           <td>${escapeHtml(b.lastName)}</td>
@@ -94,7 +120,7 @@
           <td>${escapeHtml(b.sponsorAirline)}</td>
           <td>${escapeHtml(b.bookingDate)}</td>
           <td>${escapeHtml(b.timeSlot)}</td>
-          <td><span class="badge ${badgeClass(b.status)}">${escapeHtml(b.status || "Pending")}</span></td>
+          <td><span class="badge ${badgeClass(b.bookingStatus || b.status)}">${escapeHtml(b.bookingStatus || b.status || "Pending")}</span></td>
         `;
         bookingsBody.appendChild(tr);
       });
@@ -104,23 +130,38 @@
       statusArea.textContent = "Loading…";
       try {
         const res = await fetch(BOOKINGS_ENDPOINT, {
-          headers: { 
-            "Content-Type": "application/json",
-            "x-staff-key": STAFF_SECRET // ✅ now matches server.js
-          }
+          headers: { "x-staff-key": STAFF_SECRET }
         });
         if (!res.ok) {
           statusArea.textContent = "Error fetching bookings: " + res.status;
           return;
         }
         const data = await res.json();
-        const bookings = Array.isArray(data) ? data : data.bookings || [];
-        renderBookings(bookings);
+        allBookings = Array.isArray(data.bookings) ? data.bookings : [];
+        renderBookings(allBookings);
       } catch (err) {
         statusArea.textContent = "Failed to load bookings.";
         console.error(err);
       }
     }
+
+    // Search form handling
+    document.getElementById("searchForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const term = document.getElementById("searchInput").value.trim().toUpperCase();
+      if (!term) {
+        renderBookings(allBookings);
+        return;
+      }
+      const results = allBookings.filter(b => (b.bookingId || "").toUpperCase().includes(term));
+      renderBookings(results);
+    });
+
+    // Reset button
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("searchInput").value = "";
+      renderBookings(allBookings);
+    });
 
     fetchBookings();
   </script>
