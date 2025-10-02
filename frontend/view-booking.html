@@ -104,7 +104,10 @@
       statusArea.textContent = "Loading…";
       try {
         const res = await fetch(BOOKINGS_ENDPOINT, {
-          headers: { "x-staff-secret": STAFF_SECRET }
+          headers: { 
+            "Content-Type": "application/json",
+            "x-staff-key": STAFF_SECRET // ✅ now matches server.js
+          }
         });
         if (!res.ok) {
           statusArea.textContent = "Error fetching bookings: " + res.status;
